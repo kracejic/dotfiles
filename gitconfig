@@ -1,0 +1,123 @@
+[user]
+    name = kracejic
+    email = kracejic@gmail.com
+[core]
+    # editor = vim
+    pager = less -r
+
+[color]
+    branch = auto
+    diff = auto
+    status = auto
+
+[color "branch"]
+    current = yellow reverse
+    local = yellow
+    remote = green
+
+[color "diff"]
+    meta = yellow bold
+    frag = magenta bold
+    old = red bold
+    new = green bold
+
+[color "status"]
+    added = yellow
+    changed = green
+    untracked = cyan
+[alias]
+    #short status
+    s = status -s -b 
+
+    #create new branch and check it out
+    cb = checkout -b
+    bc = checkout -b
+    b = branch
+    c = checkout
+    p = push
+    pu = pull --ff-only
+    
+    f = fetch
+    fa = fetch --all
+    
+    cm = commit -am
+    co = commit
+    ca = commit --amend
+    
+    #safe merging
+    m = merge --ff-only
+    mff = merge --ff-only
+    mnff = merge --no-ff
+    
+    rb = rebase
+    rbi = rebase -i
+    rbcont = rebase --continue
+    rbas = rebase --autostash
+    u = add --update :/
+
+    #diffs
+    d = diff --stat
+    #diff with no whitespace
+    db = diff -b
+    #diff with words only and no whitespace
+    dw = diff --color-words -b
+    dd = diff --color-words -b
+    dh = diff --color-words -b HEAD
+    diff=diff --ws-error-highlight=all
+
+    #graphs
+    go = log --graph --pretty=format:'%C(yellow)%h%Creset%C(red bold)%d%Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' --decorate --abbrev-commit --all
+    g = log --oneline --decorate --graph --all
+    gb = log --graph --simplify-by-decoration --pretty=format:'%d' --all
+    g2 = log --graph --pretty=format':%s %Cblue%an, %ar %Cgreen(%h)%Creset'
+    g3 = log --pretty=format:"%Cgreen%h%Creset %ad %C(cyan)%an%Creset - %s%C(red)%d%Creset" --graph --date=short
+    g4 = log --graph --abbrev-commit --decorate --all --format=format:\"%C(bold blue)%h%C(dim black) - %C(reset)%C(dim white)%aD%C(dim black) - %C(bold blue)%an%C(reset) %C(green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n %C(white)%s%C(reset)\"
+    g5 = log --graph --abbrev-commit --decorate --all --format=format:\"%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(dim white) - %an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n %C(white)%s%C(reset)\"
+    glong = log --stat --decorate --graph
+    logMerges = log --first-parent --graph
+
+    #graph with diffs, useful for tracking one file history
+    gdiff = log --oneline --decorate --graph --full-history -p  -c --color-words -b
+    gdifff = log --oneline --decorate --graph --follow --full-history -p  -c --color-words -b
+    gldiff = log --format=medium --decorate --graph -p  -c
+    gldifff = log --format=medium --decorate --graph --follow -p  -c
+
+    mt = mergetool
+    dt = difftool
+    listExcluded = ls-files --other --ignored --exclude-standard
+    logBranch = log --no-merges
+    sh = show
+    sss = show
+    ss = show --stat
+    home = rev-parse --show-toplevel
+    movebranchto=branch -f
+
+    whois = "!sh -c 'git log -i -1 --pretty=\"format:%an <%ae>\n\" --author=\"$1\"' -"
+    whatis = show -s --pretty='tformat:%h (%s, %ad)' --date=short
+
+    #Human aliases :)
+    branches = branch -a
+    tags = tag
+    stashes = stash list
+    remotes = remote -v
+
+    unstage = reset -q HEAD --
+    discard = checkout --
+    uncommit = reset --mixed HEAD~
+    amend = commit --amend
+
+    #unstages changes in the index, discards changes in the working directory, and removes any new files.
+    nevermindall = !git reset --hard HEAD && git clean -d -f
+    nevermind = reset --hard HEAD
+
+    precommit = diff --cached --diff-algorithm=minimal -w
+
+    # use git fixup COMMIT to change a specific "COMMIT", exactly like you would use git commit --amend to change the latest one.
+    # You can use all git commit arguments, like -a, -p and filenames. It will respect your index, so you can use git add. It won't touch the changes you are not committing.
+    fixup = "!f() { TARGET=$(git rev-parse "$1"); git commit --fixup=$TARGET ${@:2} && EDITOR=true git rebase -i --autostash --autosquash $TARGET^; }; f"
+
+
+[push]
+    default = current
+[merge]
+	defaultToUpstream = true

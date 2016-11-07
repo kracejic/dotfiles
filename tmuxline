@@ -1,0 +1,35 @@
+#!/bin/sh
+
+LSEP="◀"
+LSEPE=
+RSEP="◀"
+RSEPE="◀"
+
+CLOCK=⌚
+CALENDAR=☼
+MUSIC=♫
+CPUIMG=⎈
+
+# WIDTH=${1}
+WIDTH=120
+
+SMALL=80
+MEDIUM=110
+
+# if [ "$WIDTH" -gt "$MEDIUM" ]; then
+#   MPD="#[fg=colour252,bg=default,nobold,noitalics,nounderscore]$RSEP#[fg=colour16,bg=colour252,bold,noitalics,nounderscore] $MUSIC $(mpc current)"
+#   date_colour='colour252'
+# fi
+
+
+if [ "$WIDTH" -gt "$MEDIUM" ]; then
+  PROC="#[fg=colour240,bg=colour238,nobold,noitalics,nounderscore]#[fg=colour16,bg=colour240,bold,noitalics,nounderscore]$(uptime | rev | cut -d":" -f1 | rev | sed s/,\ /\ /g | sed s/,/./g)"
+  date_colour='colour252'
+fi
+
+if [ "$WIDTH" -ge "$SMALL" ]; then
+  UNAME="#[fg=colour160,bg=colour240,nobold,noitalics,nounderscore]#[fg=colour16,bg=colour160,bold,noitalics,nounderscore] $(uname -n)"
+fi
+TIME="#[fg=colour238,bg=colour234,nobold,noitalics,nounderscore]#[fg=colour252,bg=colour238,bold,noitalics,nounderscore] $(date +'%H:%M')"
+
+echo "$TIME $PROC $UNAME" | sed 's/ *$/ /g'
