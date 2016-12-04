@@ -121,3 +121,7 @@
     default = current
 [merge]
 	defaultToUpstream = true
+[diff]
+	indentHeuristic = true
+[credential]
+	helper = store

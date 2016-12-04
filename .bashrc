@@ -31,6 +31,11 @@ alias lls="ls -lh --color"
 alias cd..="cd .."
 alias lsf="ls -al | grep"
 alias psf="ps -A | grep"
+alias grepp="grep -Rns"
+
+alias makep="prettyfier make"
+alias cmakep="prettyfier cmake"
+alias ninjap="prettyfier ninja"
 
 # easy find
 findfunction() {
@@ -148,8 +153,8 @@ alias meminfo='free -m -l -t'
 alias psmem='ps auxf | sort -nr -k 4'
 alias psmem10='ps auxf | sort -nr -k 4 | head -10'
 
-alias updateycm='cd ~/.vim/bundle/YouCompleteMe && ./install.py --clang-completer'
-alias updateycmall='cd ~/.vim/bundle/YouCompleteMe && ./install.py --clang-completer --gocode-completer --tern-completer --tern-completer'
+alias updateycm='cd ~/.vim/bundle/YouCompleteMe && git pull && git pull --recurse-submodules && ./install.py --clang-completer'
+alias updateycmall='cd ~/.vim/bundle/YouCompleteMe && git pull && git pull --recurse-submodules && ./install.py --clang-completer --gocode-completer --tern-completer --tern-completer'
 
 ## get top process eating cpu ##
 alias pscpu='ps auxf | sort -nr -k 3'

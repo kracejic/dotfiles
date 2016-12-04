@@ -44,6 +44,9 @@ Plugin 'kana/vim-textobj-user'
 " f F text objects
 Plugin 'kana/vim-textobj-function'
 
+" User defined operators/actions
+Plugin 'kana/vim-operator-user'
+
 Plugin 'michaeljsmith/vim-indent-object'
 
 Plugin 'vimwiki/vimwiki'
@@ -90,6 +93,9 @@ Plugin 'honza/vim-snippets'
 Plugin 'kracejic/snippetinabox.vim'
 
 Plugin 'scrooloose/syntastic'
+
+" search with :Ack [options] {pattern] [{directories}]
+Plugin 'mileszs/ack.vim'
 
 Plugin 'vim-scripts/DoxygenToolkit.vim'
 
@@ -175,7 +181,7 @@ set smartindent "Enable smart-indent
 set smarttab    "Enable smart-tabs
 set softtabstop=4   "Number of spaces per Tab
 set wildmenu            " visual autocomplete for command menu
-set wildignore=*.o,*.obj,*.bak,*.exe,*.py[co],*.swp,*~,*.pyc,.svn,*/cm/log/*,tags,*.jpg,*.jpeg,*.png,*.mesh,build*/
+set wildignore+=*.o,*.obj,*.bak,*.exe,*.py[co],*.swp,*~,*.pyc,.svn,*/cm/log/**,tags,*.jpg,*.png,*.jpeg,*.png,*.mesh,build*/**,build/**,*.sublime-workspace,*.svg,build2/**,build3/**
 set lazyredraw          " redraw only when we need to.
 set confirm             " get a dialog when :q, :w, or :wq fails
 set nobackup            " no backup~ files.
@@ -243,6 +249,9 @@ nnoremap <C-w><C-w>j 8<C-w>+
 :nmap \[ :bprev<CR>
 :nmap <leader>w :bd<CR>
 
+:command! Bd bp|bd<space>#
+
+:nnoremap <leader>W :Bd<CR>
 
 
 " syntax enable           " enable syntax processing
@@ -274,11 +283,12 @@ let g:SignatureMarkerTextHLDynamic = 1
 " vnoremap <tab> %
 
 "strip whitespace
-nnoremap <leader>W :%s/\s\+$//<cr>:let @/=''<CR>
+nnoremap <leader>sw :%s/\s\+$//<cr>:let @/=''<CR>
 
 " vimwiki
-command! Table :VimwikiTable
-command! Toc ::VimwikiTOC
+command! WTable :VimwikiTable
+command! WToc ::VimwikiTOC
+command! WTags ::VimwikiRebuildTags
 
 if hostname() == "MD1CQ28C"
     let g:vimwiki_list = [{'path': '/d/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '/d/cloud/space/source/.siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
@@ -331,6 +341,33 @@ nmap <leader>func <Plug>ShowFunc
 nmap <leader>fun <Plug>ShowFunc<CR><C-w>H
 " nmap <leader>cf <Plug>(operator-clang-format)
 " vmap <leader>cf <Plug>(operator-clang-format)
+
+
+" CLANG FORMAT
+" default settings
+let g:clang_format#code_style = "llvm"
+let g:clang_format#style_options = {
+      \ "AllowShortFunctionsOnASingleLine": "Empty",
+      \ "AlwaysBreakTemplateDeclarations": "true",
+      \ "BreakBeforeBraces": "Allman",
+      \ "BreakConstructorInitializersBeforeComma": "true",
+      \ "IndentCaseLabels": "true",
+      \ "IndentWidth":     4,
+      \ "MaxEmptyLinesToKeep": 2,
+      \ "NamespaceIndentation": "Inner",
+      \ "ObjCBlockIndentWidth": 4,
+      \ "TabWidth": 4}
+
+augroup ClangFormatSettings
+    autocmd!
+    " map to <Leader>cf in C++ code
+    autocmd FileType c,cpp,objc nnoremap <buffer><Leader>cf :<C-u>ClangFormat<CR> zz
+    autocmd FileType c,cpp,objc vnoremap <buffer><Leader>cf :ClangFormat<CR> zz
+    " format line +-1
+    autocmd FileType c,cpp,objc nnoremap <buffer><Leader>cc :.-1,.+1ClangFormat<CR> zz
+    " if you install vim-operator-user
+    autocmd FileType c,cpp,objc map <buffer><Leader>c <Plug>(operator-clang-format)
+augroup END
 
 
 :nmap \e :NERDTreeToggle<CR>
@@ -416,8 +453,20 @@ command! W :w
 " :h ins-completion.
 " :YcmDiags - errors
 let g:ycm_confirm_extra_conf = 0
-nnoremap <leader>jd :YcmCompleter GoToDefinitionElseDeclaration<CR>
+let g:ycm_global_ycm_extra_conf = '~/bin/rc/.ycm_extra_conf.py' 
+let g:ycm_error_symbol = '%'
+let g:ycm_warning_symbol = '%'
+nnoremap <leader>yj :YcmCompleter GoToDefinitionElseDeclaration<CR>
+nnoremap <leader>yg :YcmCompleter GoTo<CR>
+nnoremap <leader>yi :YcmCompleter GoToImplementationElseDeclaration<CR>
+nnoremap <leader>yt :YcmCompleter GetTypeImprecise<CR>
+nnoremap <leader>yd :YcmCompleter GetDocImprecise<CR>
+nnoremap <leader>yf :YcmCompleter FixIt<CR>
+nnoremap <leader>yD :YcmDiags<CR>
+nnoremap <leader>yR :YcmRestartServer<CR>
 nnoremap <F12> :YcmCompleter GoToDefinitionElseDeclaration<CR>
+nnoremap <F10> :YcmCompleter GetTypeImprecise<CR>
+nnoremap <F9> :YcmCompleter GetDocImprecise<CR>
 "nnoremap <F5> :YcmForceCompileAndDiagnostics<CR>
 
 
@@ -529,14 +578,17 @@ vnoremap <silent> # :<C-U>
   \escape(@", '?\.*$^~['), '\_s\+', '\\_s\\+', 'g')<CR><CR>
   \gV:call setreg('"', old_reg, old_regtype)<CR>
 
+" select ag as :Ack search when available
+if executable('ag')
+  let g:ackprg = 'ag --nogroup --nocolor --column'
+endif
 
 "Work stuff
 command! Ctpdiff :!cleartool diff -pre -col 190 % | less
 command! Ctpdiff2 :!cleartool diff -pre -ser % | less
 
 
-
-
+" Fix autocpopletions
 function! g:UltiSnips_Complete()
   call UltiSnips#ExpandSnippet()
   if g:ulti_expand_res == 0
@@ -574,6 +626,7 @@ au InsertEnter * exec "inoremap <silent> " . g:UltiSnipsExpandTrigger     . " <C
 au InsertEnter * exec "inoremap <silent> " .     g:UltiSnipsJumpBackwardTrigger . " <C-R>=g:UltiSnips_Reverse()<cr>"
 
 
+" execute macro on visal range
 xnoremap @ :<C-u>call ExecuteMacroOverVisualRange()<CR>
 
 function! ExecuteMacroOverVisualRange()
