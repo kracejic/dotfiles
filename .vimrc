@@ -287,8 +287,8 @@ nnoremap <leader>sw :%s/\s\+$//<cr>:let @/=''<CR>
 
 " vimwiki
 command! WTable :VimwikiTable
-command! WToc ::VimwikiTOC
-command! WTags ::VimwikiRebuildTags
+command! WToc :VimwikiTOC
+command! WTags :VimwikiRebuildTags
 
 if hostname() == "MD1CQ28C"
     let g:vimwiki_list = [{'path': '/d/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '/d/cloud/space/source/.siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
@@ -462,6 +462,7 @@ nnoremap <leader>yi :YcmCompleter GoToImplementationElseDeclaration<CR>
 nnoremap <leader>yt :YcmCompleter GetTypeImprecise<CR>
 nnoremap <leader>yd :YcmCompleter GetDocImprecise<CR>
 nnoremap <leader>yf :YcmCompleter FixIt<CR>
+nnoremap <leader>yr :YcmCompleter GoToReferences<CR>
 nnoremap <leader>yD :YcmDiags<CR>
 nnoremap <leader>yR :YcmRestartServer<CR>
 nnoremap <F12> :YcmCompleter GoToDefinitionElseDeclaration<CR>
@@ -588,7 +589,7 @@ command! Ctpdiff :!cleartool diff -pre -col 190 % | less
 command! Ctpdiff2 :!cleartool diff -pre -ser % | less
 
 
-" Fix autocpopletions
+" Fix autocompletions
 function! g:UltiSnips_Complete()
   call UltiSnips#ExpandSnippet()
   if g:ulti_expand_res == 0

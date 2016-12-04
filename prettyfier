@@ -1,0 +1,45 @@
+#!/bin/bash
+GREEN=`echo -e '\033[0;32m'`
+GREENBOLD=`echo -e '\033[1;32m'`
+RED=`echo -e '\033[1;31m'`
+WARNING=`echo -e '\033[1;35m'`
+FILE=`echo -e '\033[1;37m'`
+GREY=`echo -e '\033[2;37m'`
+KEYWORD=`echo -e '\033[2;36m'`
+BUILD=`echo -e '\033[0;35m'`
+BLUE=`echo -e '\033[1;34m'`
+PURPLE=`echo -e '\033[0;35m'`
+PURPLEBOLD=`echo -e '\033[1;35m'`
+# DARKGREY=`echo -e '\033[2;37m'`
+NORMAL=`echo -e '\033[m'`
+
+$1 ${*:2} 2>&1 | \
+    sed -u -e "s/\(make\[.*\)/${GREY}\1${NORMAL}/gI" \
+    -e "s/\(\S*:[0-9]*:\)/${FILE}\1${NORMAL}/gI" \
+    -e "s/error/${RED}error${NORMAL}/gI" \
+    -e "s/\(^[^#^-]*\)make /\1${KEYWORD}make ${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)rpm /\1${KEYWORD}rpm ${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)cp /\1${KEYWORD}cp ${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)rm /\1${KEYWORD}rm ${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)mkdir /\1${KEYWORD}mkdir ${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)CC /\1${BUILD}CC ${NORMAL}/g" \
+    -e "s/\(^[^#]*\)LD /\1${BUILD}LD ${NORMAL}/g" \
+    -e "s/\(^[^#]*\)warning/\1${WARNING}warning${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)Note:/\1${GREY}Note:${NORMAL}/gI" \
+    -e "s/\(^\[.*\]\)\( Built.*$\)/\1${GREY}\2${NORMAL}/gI" \
+    -e "s/\(^\[.*\]\)\( Bui.*$\)/\1${GREEN}\2${NORMAL}/gI" \
+    -e "s/\(^\[.*\]\)\( Lin.*$\)/\1${GREENBOLD}\2${NORMAL}/gI" \
+    -e "s/\(^\[.*\]\)\( .*$\)/\1${BLUE}\2${NORMAL}/gI" \
+    -e "s/ Passed/ ${GREEN}Passed${NORMAL}/gI" \
+    -e "s/ Failed:/ ${RED}Failed:${NORMAL}/gI" \
+    -e "s/\([1-9][0-9]*\) Failed/\1${RED} Failed${NORMAL}/gI" \
+    -e "s/\*\*\*Failed /${RED}\*\*\*Failed${NORMAL} /g" \
+    -e "s/\(-- .*\)YES/\1${GREEN}YES${NORMAL}/g" \
+    -e "s/\(-- .*\)NO/\1${RED}NO${NORMAL}/g" \
+    -e "s/\(-- .*\)\(Found \S*\)/\1${PURPLE}\2${NORMAL}/g" \
+    -e "s/\(--\s\)\(.*done\)/\1${GREEN}\2${NORMAL}/g" \
+    -e "s/\(^-- \)/${GREY}--${NORMAL} /g" \
+    -e "s/\(^\s*\^\)\([~]*\)/${PURPLEBOLD}\1${GREY}\2${NORMAL}/g" \
+    -e "s/\(^100%\) tests passed/${GREEN}\1 tests passed${NORMAL}/g" \
+    -e "s/\(^[0-9]*%\) tests passed/${RED}\1 tests passed${NORMAL}/g" \
+    -e "s/^[+]/${PURPLEBOLD}+${NORMAL}/gI" ; test ${PIPESTATUS[0]} -eq 0
