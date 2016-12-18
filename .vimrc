@@ -369,6 +369,8 @@ augroup ClangFormatSettings
     autocmd FileType c,cpp,objc map <buffer><Leader>c <Plug>(operator-clang-format)
 augroup END
 
+let g:syntastic_cpp_compiler_options = "-std=c++14"
+
 
 :nmap \e :NERDTreeToggle<CR>
 ":nmap \t w setlocal wrap!<CR>:setlocal wrap?
@@ -463,7 +465,8 @@ nnoremap <leader>yt :YcmCompleter GetTypeImprecise<CR>
 nnoremap <leader>yd :YcmCompleter GetDocImprecise<CR>
 nnoremap <leader>yf :YcmCompleter FixIt<CR>
 nnoremap <leader>yr :YcmCompleter GoToReferences<CR>
-nnoremap <leader>yD :YcmDiags<CR>
+nnoremap <leader>ys :YcmDiags<CR>
+nnoremap <leader>yD ::YcmForceCompileAndDiagnostics<CR>
 nnoremap <leader>yR :YcmRestartServer<CR>
 nnoremap <F12> :YcmCompleter GoToDefinitionElseDeclaration<CR>
 nnoremap <F10> :YcmCompleter GetTypeImprecise<CR>
@@ -516,6 +519,7 @@ map <Leader>k <Plug>(easymotion-k)
 vnoremap < <gv
 vnoremap > >gv
 
+" -----------------------------------------------------------------------------
 " fast indentations changes
 nmap <leader>t1 :set expandtab tabstop=1 shiftwidth=1 softtabstop=1<CR>
 nmap <leader>T1 :set noexpandtab tabstop=1 shiftwidth=1 softtabstop=1<CR>
@@ -528,7 +532,6 @@ nmap <leader>T6 :set noexpandtab tabstop=6 shiftwidth=6 softtabstop=6<CR>
 nmap <leader>t8 :set expandtab tabstop=8 shiftwidth=8 softtabstop=8<CR>
 nmap <leader>T8 :set noexpandtab tabstop=8 shiftwidth=8 softtabstop=8<CR>
 
-let g:syntastic_cpp_compiler_options = "-std=c++14"
 
 " Python specific
 " au BufNewFile,BufRead *.py
@@ -541,6 +544,7 @@ let g:syntastic_cpp_compiler_options = "-std=c++14"
 "     \ set fileformat=unix
 
 
+" -----------------------------------------------------------------------------
 " Highlight all instances of word under cursor, when idle.
 " Useful when studying strange source code.
 " Type z/ to toggle highlighting on/off.
@@ -564,9 +568,11 @@ function! AutoHighlightToggle()
   endif
 endfunction
 
+" -----------------------------------------------------------------------------
 " search for visually selected text
 vnoremap // y/<C-R>"<CR>
 
+" -----------------------------------------------------------------------------
 " Search for selected text, forwards or backwards.
 vnoremap <silent> * :<C-U>
   \let old_reg=getreg('"')<Bar>let old_regtype=getregtype('"')<CR>
@@ -579,16 +585,19 @@ vnoremap <silent> # :<C-U>
   \escape(@", '?\.*$^~['), '\_s\+', '\\_s\\+', 'g')<CR><CR>
   \gV:call setreg('"', old_reg, old_regtype)<CR>
 
+" -----------------------------------------------------------------------------
 " select ag as :Ack search when available
 if executable('ag')
   let g:ackprg = 'ag --nogroup --nocolor --column'
 endif
 
-"Work stuff
+" -----------------------------------------------------------------------------
+"Work stuff clear case
 command! Ctpdiff :!cleartool diff -pre -col 190 % | less
 command! Ctpdiff2 :!cleartool diff -pre -ser % | less
 
 
+" -----------------------------------------------------------------------------
 " Fix autocompletions
 function! g:UltiSnips_Complete()
   call UltiSnips#ExpandSnippet()
@@ -627,6 +636,7 @@ au InsertEnter * exec "inoremap <silent> " . g:UltiSnipsExpandTrigger     . " <C
 au InsertEnter * exec "inoremap <silent> " .     g:UltiSnipsJumpBackwardTrigger . " <C-R>=g:UltiSnips_Reverse()<cr>"
 
 
+" -----------------------------------------------------------------------------
 " execute macro on visal range
 xnoremap @ :<C-u>call ExecuteMacroOverVisualRange()<CR>
 
@@ -635,3 +645,75 @@ function! ExecuteMacroOverVisualRange()
   execute ":'<,'>normal @".nr2char(getchar())
 endfunction
 
+
+" -----------------------------------------------------------------------------
+" CMake support
+function! BuildCMakeProjectShort(target, dir)
+    echom a:target
+    if isdirectory(a:dir)
+        silent !clear
+        execute "! cd " . a:dir . " && clear && cmake --build . --target " . a:target . " && echo '-- Build was OK'"
+    else
+        echo "build folder was not found, cannot build"
+    endif
+endfunction
+
+function! BuildCMakeProject(target, dir)
+    echom a:target
+    if isdirectory(a:dir)
+        let result = system( "cd " . a:dir . " && clear && cmake --build . --target " . a:target . " 2>&1 && echo '-- Build was OK'")
+
+        split __Build_output__
+        normal! ggdG
+        setlocal filetype=krcppbuild
+        setlocal buftype=nofile
+        setlocal bufhidden=hide
+        setlocal nobuflisted
+
+        " Insert the bytecode.
+        call append(0, split(result, '\v\n'))
+        setlocal nonumber
+        setlocal norelativenumber
+        " setlocal nomodifiable
+
+        :map <buffer> q :bd<cr>
+    else
+        echo "build folder was not found, cannot build"
+    endif
+endfunction
+
+if isdirectory("build")
+    nmap <leader>bb :call BuildCMakeProject("check", "build")<CR>
+    nmap <leader>bu :call BuildCMakeProject("unit", "build")<CR>
+    nmap <leader>bB :call BuildCMakeProject("all", "build")<CR>
+    nmap <leader>br :call BuildCMakeProjectShort("run", "build")<CR>
+    nmap <leader>bc :call BuildCMakeProjectShort("clean", "build")<CR>
+    nmap <leader>bf :call BuildCMakeProjectShort("format", "build")<CR>
+    nmap <leader>bd :call BuildCMakeProjectShort("doc", "build")<CR>
+    nmap <leader>bp :call BuildCMakeProject("package", "build")<CR>
+endif
+
+if isdirectory("build2")
+    nmap <leader>b2b :call BuildCMakeProject("check", "build2")<CR>
+    nmap <leader>b2u :call BuildCMakeProject("unit", "build2")<CR>
+    nmap <leader>b2B :call BuildCMakeProject("all", "build2")<CR>
+    nmap <leader>b2r :call BuildCMakeProjectShort("run", "build2")<CR>
+    nmap <leader>b2c :call BuildCMakeProjectShort("clean", "build2")<CR>
+    nmap <leader>b2f :call BuildCMakeProjectShort("format", "build2")<CR>
+    nmap <leader>b2d :call BuildCMakeProjectShort("doc", "build2")<CR>
+    nmap <leader>b2p :call BuildCMakeProject("package", "build2")<CR>
+endif
+    
+if isdirectory("build3")
+    nmap <leader>b3b :call BuildCMakeProject("check", "build3")<CR>
+    nmap <leader>b3u :call BuildCMakeProject("unit", "build3")<CR>
+    nmap <leader>b3B :call BuildCMakeProject("all", "build3")<CR>
+    nmap <leader>b3r :call BuildCMakeProjectShort("run", "build3")<CR>
+    nmap <leader>b3c :call BuildCMakeProjectShort("clean", "build3")<CR>
+    nmap <leader>b3f :call BuildCMakeProjectShort("format", "build3")<CR>
+    nmap <leader>b3d :call BuildCMakeProjectShort("doc", "build3")<CR>
+    nmap <leader>b3p :call BuildCMakeProject("package", "build3")<CR>
+endif
+
+
+" -----------------------------------------------------------------------------

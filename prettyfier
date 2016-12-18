@@ -16,9 +16,9 @@ NORMAL=`echo -e '\033[m'`
 $1 ${*:2} 2>&1 | \
     sed -u -e "s/\(make\[.*\)/${GREY}\1${NORMAL}/gI" \
     -e "s/\(\S*:[0-9]*:\)/${FILE}\1${NORMAL}/gI" \
-    -e "s/error/${RED}error${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)error/\1${RED}error${NORMAL}/gI" \
     -e "s/\(^[^#^-]*\)make /\1${KEYWORD}make ${NORMAL}/gI" \
-    -e "s/\(^[^#]*\)rpm /\1${KEYWORD}rpm ${NORMAL}/gI" \
+    -e "s/\(^[^#^-]*\)\(rpm\) /\1${KEYWORD}\2 ${NORMAL}/gI" \
     -e "s/\(^[^#]*\)cp /\1${KEYWORD}cp ${NORMAL}/gI" \
     -e "s/\(^[^#]*\)rm /\1${KEYWORD}rm ${NORMAL}/gI" \
     -e "s/\(^[^#]*\)mkdir /\1${KEYWORD}mkdir ${NORMAL}/gI" \
@@ -32,10 +32,12 @@ $1 ${*:2} 2>&1 | \
     -e "s/\(^\[.*\]\)\( .*$\)/\1${BLUE}\2${NORMAL}/gI" \
     -e "s/ Passed/ ${GREEN}Passed${NORMAL}/gI" \
     -e "s/ Failed:/ ${RED}Failed:${NORMAL}/gI" \
+    -e "s/\( Create package using.*$\)/${PURPLEBOLD}\1${NORMAL}/gI" \
+    -e "s/\(CPack:\)/${GREY}\1${NORMAL}/gI" \
     -e "s/\([1-9][0-9]*\) Failed/\1${RED} Failed${NORMAL}/gI" \
     -e "s/\*\*\*Failed /${RED}\*\*\*Failed${NORMAL} /g" \
     -e "s/\(-- .*\)YES/\1${GREEN}YES${NORMAL}/g" \
-    -e "s/\(-- .*\)NO/\1${RED}NO${NORMAL}/g" \
+    -e "s/\(-- .*\)NO\b/\1${RED}NO${NORMAL}/g" \
     -e "s/\(-- .*\)\(Found \S*\)/\1${PURPLE}\2${NORMAL}/g" \
     -e "s/\(--\s\)\(.*done\)/\1${GREEN}\2${NORMAL}/g" \
     -e "s/\(^-- \)/${GREY}--${NORMAL} /g" \
