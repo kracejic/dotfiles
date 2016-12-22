@@ -42,6 +42,8 @@ findfunction() {
   find 2>/dev/null -L -iname "*$1*" ${@:2}
 }
 alias findn=findfunction
+alias findbig="find ./ -type f -print0 | xargs -0 du | sort -n | tail -n 100 | cut -f2 | xargs -I{} du -sh {}"
+alias finfbigdir="find ./ -maxdepth 1 -type d -print0 | xargs -0 du --max-depth=1 | sort -n | tail -n 50 | tail -n +2 | cut -f2 | xargs -I{} du -sh {}"
 
 # same installation commands
 if [ -e /etc/yum.conf ] ; then
