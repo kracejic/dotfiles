@@ -36,6 +36,8 @@ $1 ${*:2} 2>&1 | \
     -e "s/\(CPack:\)/${GREY}\1${NORMAL}/gI" \
     -e "s/\([1-9][0-9]*\) Failed/\1${RED} Failed${NORMAL}/gI" \
     -e "s/\*\*\*Failed /${RED}\*\*\*Failed${NORMAL} /g" \
+    -e "s/\(-- \)Installing/\1${PURPLEBOLD}Installing${NORMAL}/g" \
+    -e "s/\(-- \)Up-to-date/\1${GREY}Up-to-date${NORMAL}/g" \
     -e "s/\(-- .*\)YES/\1${GREEN}YES${NORMAL}/g" \
     -e "s/\(-- .*\)NO\b/\1${RED}NO${NORMAL}/g" \
     -e "s/\(-- .*\)\(Found \S*\)/\1${PURPLE}\2${NORMAL}/g" \

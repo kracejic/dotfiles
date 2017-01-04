@@ -33,7 +33,7 @@ The list of all the available styles can be obtained with (from GDB itself):
     python from pygments.styles import get_all_styles as styles
     python for s in styles(): print(s)
 """,
-                'default': 'vim',
+                'default': 'monokai',
                 'type': str
             },
             # prompt
@@ -828,7 +828,7 @@ class Source(Dashboard.Module):
         return {
             'context': {
                 'doc': 'Number of context lines.',
-                'default': 5,
+                'default': 9,
                 'type': int,
                 'check': check_ge_zero
             }
@@ -1368,6 +1368,13 @@ set python print-stack full
 # Start ------------------------------------------------------------------------
 
 python Dashboard.start()
+
+dashboard registers
+dashboard assembly
+
+alias -a src = dashboard source -style context
+alias -a dbstackFull = db stack -style locals True
+alias -a dbstackArgs = db stack -style locals False
 
 # ------------------------------------------------------------------------------
 # Copyright (c) 2015-2016 Andrea Cardaci <cyrus.and@gmail.com>

@@ -297,6 +297,7 @@ elseif hostname() =~ "chirm"
 else
     let g:vimwiki_list = [{'path': '~/ownCloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
 endif
+au BufNewFile,BufRead *.mdw set nowrap
 
 " let g:vimwiki_list = [{'path': '~/ownCloud/space/', 'path_html': '~/ownCloud/space_html/'},{'path': '~/test_vim/', 'syntax': 'markdown', 'ext': '.md'}, {'path': '~/ownCloud/space/source/', 'syntax': 'markdown', 'ext': '.md'}]
 
