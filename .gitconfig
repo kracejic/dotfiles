@@ -5,6 +5,9 @@
     # editor = vim
     pager = less -r
 
+[include]
+    path = .gitconfig_work
+
 [color]
     branch = auto
     diff = auto
@@ -68,13 +71,15 @@
     #graphs
     go = log --graph --pretty=format:'%C(yellow)%h%Creset%C(red bold)%d%Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' --decorate --abbrev-commit --all
     g = log --oneline --decorate --graph --all
-    gb = log --graph --simplify-by-decoration --pretty=format:'%d' --all
-    g2 = log --graph --pretty=format':%s %Cblue%an, %ar %Cgreen(%h)%Creset'
-    g3 = log --pretty=format:"%Cgreen%h%Creset %ad %C(cyan)%an%Creset - %s%C(red)%d%Creset" --graph --date=short
-    g4 = log --graph --abbrev-commit --decorate --all --format=format:\"%C(bold blue)%h%C(dim black) - %C(reset)%C(dim white)%aD%C(dim black) - %C(bold blue)%an%C(reset) %C(green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n %C(white)%s%C(reset)\"
-    g5 = log --graph --abbrev-commit --decorate --all --format=format:\"%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(dim white) - %an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n %C(white)%s%C(reset)\"
+    gb = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(white)%d %C(bold black)%ar %C(reset)%n' --all
+    g2 = log --graph --pretty=format':%s %C(bold blue)%an, %ar %Cgreen(%h)%Creset'
+    g3 = log --pretty=format:"%Cgreen%h%Creset %ad %C(cyan)%an%Creset %s%C(red)%d%Creset" --graph --date=short
+    g4 = log --graph --abbrev-commit --decorate --all --format=format:\"%C(bold blue)%h%C(dim black) %C(reset)%C(dim white)%aD%C(dim black) %C(bold blue)%an%C(reset) %C(green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n %C(white)%s%C(reset)\"
+    g5 = log --graph --abbrev-commit --decorate --all --format=format:\"%C(bold blue)%h%C(reset) %C(bold cyan)%aD%C(dim white) %an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n %C(white)%s%C(reset)\"
     glong = log --stat --decorate --graph
     logMerges = log --first-parent --graph
+    ll = log --pretty=format:\"%C(bold blue)%h %C(red)%d %C(white bold)%s %Cgreen(%cr) %C(blue)<%an>%Creset %n\" --decorate --stat --graph
+
 
     #graph with diffs, useful for tracking one file history
     gdiff = log --oneline --decorate --graph --full-history -p  -c --color-words -b
@@ -101,10 +106,24 @@
     stashes = stash list
     remotes = remote -v
 
+    stash-all = stash save --include-untracked
     unstage = reset -q HEAD --
     discard = checkout --
     uncommit = reset --mixed HEAD~
     amend = commit --amend
+
+    # find file in repo
+    find = "!git ls-files | grep -i"
+    grep = grep -Ii
+    aliases = "!git config -l | grep alias | cut -c 7-"
+    lasttag = describe --tags --abbrev=0
+
+    # prevent checking of changes on some files
+    assume = update-index --assume-unchanged
+    unassume = update-index --no-assume-unchanged
+    assumed = "!git ls-files -v | grep ^h | cut -c 3-"
+    unassumeall = "!git assumed | xargs git update-index --no-assume-unchanged"
+    assumeall = "!git st -s | awk {'print $2'} | xargs git assume"
 
     #unstages changes in the index, discards changes in the working directory, and removes any new files.
     nevermindall = !git reset --hard HEAD && git clean -d -f
@@ -118,10 +137,15 @@
 
 
 [push]
-    default = current
+    default = simple
+    followTags = true
 [merge]
 	defaultToUpstream = true
+        tool = vimdiff
+        conflictstyle = diff3
 [diff]
 	indentHeuristic = true
 [credential]
 	helper = store
+[remote-hg]
+	track-branches = false

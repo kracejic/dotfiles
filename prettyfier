@@ -15,17 +15,20 @@ NORMAL=`echo -e '\033[m'`
 
 $1 ${*:2} 2>&1 | \
     sed -u -e "s/\(make\[.*\)/${GREY}\1${NORMAL}/gI" \
-    -e "s/\(\S*:[0-9]*:\)/${FILE}\1${NORMAL}/gI" \
-    -e "s/\(^[^#]*\)error/\1${RED}error${NORMAL}/gI" \
-    -e "s/\(^[^#^-]*\)make /\1${KEYWORD}make ${NORMAL}/gI" \
+    -e "s/\(\S*:[0-9]*:[^0-9]\)/${FILE}\1${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)\(error\)/\1${RED}\2${NORMAL}/gI" \
+    -e "s/\(^[C^#^-]*\)make /\1${KEYWORD}make ${NORMAL}/gI" \
     -e "s/\(^[^#^-]*\)\(rpm\) /\1${KEYWORD}\2 ${NORMAL}/gI" \
-    -e "s/\(^[^#]*\)cp /\1${KEYWORD}cp ${NORMAL}/gI" \
-    -e "s/\(^[^#]*\)rm /\1${KEYWORD}rm ${NORMAL}/gI" \
-    -e "s/\(^[^#]*\)mkdir /\1${KEYWORD}mkdir ${NORMAL}/gI" \
-    -e "s/\(^[^#]*\)CC /\1${BUILD}CC ${NORMAL}/g" \
-    -e "s/\(^[^#]*\)LD /\1${BUILD}LD ${NORMAL}/g" \
-    -e "s/\(^[^#]*\)warning/\1${WARNING}warning${NORMAL}/gI" \
+    -e "s/\(^[^#^[]*\)cp /\1${KEYWORD}cp ${NORMAL}/gI" \
+    -e "s/\(^[^#^[]*\)rm /\1${KEYWORD}rm ${NORMAL}/gI" \
+    -e "s/\(^[^#^[]*\)mkdir /\1${KEYWORD}mkdir ${NORMAL}/gI" \
+    -e "s/\(^[^#^[]*\)CC /\1${BUILD}CC ${NORMAL}/g" \
+    -e "s/\(^[^#^[]*\)CXX /\1${BUILD}CXX ${NORMAL}/g" \
+    -e "s/\(^[^#^[]*\)CFG /\1${BUILD}CFG ${NORMAL}/g" \
+    -e "s/\(^[^#^[^U]*\)LD /\1${BUILD}LD ${NORMAL}/g" \
+    -e "s/\(^[^#]*\)\(warning\)/\1${WARNING}\2${NORMAL}/gI" \
     -e "s/\(^[^#]*\)Note:/\1${GREY}Note:${NORMAL}/gI" \
+    -e "s/\(^###*\) \(.*\)/${GREY}\1${BLUE}\2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Built.*$\)/\1${GREY}\2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Bui.*$\)/\1${GREEN}\2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Lin.*$\)/\1${GREENBOLD}\2${NORMAL}/gI" \
@@ -46,4 +49,9 @@ $1 ${*:2} 2>&1 | \
     -e "s/\(^\s*\^\)\([~]*\)/${PURPLEBOLD}\1${GREY}\2${NORMAL}/g" \
     -e "s/\(^100%\) tests passed/${GREEN}\1 tests passed${NORMAL}/g" \
     -e "s/\(^[0-9]*%\) tests passed/${RED}\1 tests passed${NORMAL}/g" \
+    -e "s/\(^\[*INFO:*\]*\)/${GREY}\1${NORMAL}/gI" \
+    -e "s/\(SUCCESS\)/${GREEN}\1${NORMAL}/gI" \
+    -e "s/\(FAILURE\)/${RED}\1${NORMAL}/gI" \
+    -e "s/\(^Downloading:\)\(.*\)$/${BLUE}\1${GREY}\2${NORMAL}/gI" \
+    -e "s/\(^Downloaded:\)\(.*\)$/${GREEN}\1${GREY}\2${NORMAL}/gI" \
     -e "s/^[+]/${PURPLEBOLD}+${NORMAL}/gI" ; test ${PIPESTATUS[0]} -eq 0

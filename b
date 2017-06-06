@@ -3,10 +3,15 @@
 NUMCORES=`nproc`
 retval=1
 args=$*
+pretty=~/bin/prettyfier
 
 # short arguments
 if [[ $# > 0 ]]; then
     case $1 in
+        cv)
+            shift
+            args="checkVerbose $*"
+            ;;
         c|t)
             shift
             args="check $*"
@@ -39,6 +44,12 @@ if [[ $# > 0 ]]; then
             shift
             args="package $*"
             ;;
+        g|gdb)
+            shift
+            args="gdb $*"
+            pretty=
+            ;;
+
     esac
 
 fi
@@ -46,10 +57,15 @@ fi
 
 # execute right build system
 if [ -f build.ninja ]; then
-    ~/bin/prettyfier ninja -j$NUMCORES $args
+    $pretty ninja -j$NUMCORES $args
     retval=$?
 elif [ -f Makefile ]; then
-    ~/bin/prettyfier make -j$NUMCORES $args
+    $pretty make -j$NUMCORES $args
+    retval=$?
+elif [ -f pom.xml ]; then
+    export MAVEN_OPTS=-Dfile.encoding=ISO-8859-1
+    export JAVA_TOOL_OPTIONS=-Dfile.encoding=ISO-8859-1
+    $pretty mvn $args -Dmaven.test.skip=true
     retval=$?
 fi
 
