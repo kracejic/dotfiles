@@ -62,7 +62,6 @@ Plugin 'octol/vim-cpp-enhanced-highlight'
 Plugin 'godlygeek/tabular'
 Plugin 'plasticboy/vim-markdown' "better markdown support
 
-Plugin 'kracejic/themeinabox.vim'
 
 " better cooperation with tmux
 Plugin 'christoomey/vim-tmux-navigator'
@@ -96,6 +95,8 @@ Plugin 'scrooloose/syntastic'
 
 Plugin 'majutsushi/tagbar'
 
+Plugin 'joereynolds/gtags-scope'
+
 " search with :Ack [options] {pattern] [{directories}]
 Plugin 'mileszs/ack.vim'
 
@@ -110,6 +111,8 @@ Plugin 'junegunn/fzf.vim'
 Plugin 'junegunn/vim-easy-align'
 
 Plugin 'lilydjwg/colorizer'
+
+Plugin 'sheerun/vim-polyglot'
 
 Plugin 'rhysd/devdocs.vim'
 
@@ -142,6 +145,8 @@ if hostname() =~ "chirm"
     Plugin 'Valloric/YouCompleteMe'
     Plugin 'tbabej/taskwiki'
 endif
+
+Plugin 'kracejic/themeinabox.vim'
 
 " Plugin 'Yggdroot/indentLine'
 
@@ -216,12 +221,14 @@ set hidden              " remember undo after quitting
 set history=150          " keep 50 lines of command history
 set mouse=v             " use mouse in visual mode (not normal,insert,command,help mode
 set t_ut=
+set previewheight=7
 
 "display whitespace
 set listchars=tab:>-,trail:~,extends:>,precedes:<
 "set listchars=eol: ,tab:>-,trail:~,extends:>,precedes:<
 
 set tags=./tags;/   "This will look in the current directory for 'tags', and work up the tree towards root until one is found.
+set cscopetag
 
 " CtrlP settings
 let g:ctrlp_match_window = 'top,order:ttb,max:15,results:15'
@@ -237,7 +244,7 @@ if isdirectory("/mingw32")
     nnoremap <leader>, :CtrlPTag<cr>
     nnoremap <leader>q :CtrlPQuickfix<cr>
     nnoremap <Leader>ss :CtrlPObsession<CR>
-    nnoremap <tab> :CtrlPBuffer<CR>
+    nnoremap <tab> :CtrlPBuffer<CR> " TODO change, same as ctrl-i
     nnoremap <leader>a :CtrlPBuffer<CR>
     nnoremap <leader><tab> :CtrlPBuffer<CR>
 else
@@ -254,7 +261,7 @@ else
     " [Commands] --expect expression for directly executing the command
     let g:fzf_commands_expect = 'alt-enter,ctrl-x'
 
-    command! GGFiles call fzf#run(fzf#wrap({'source': 'if [ -d .git ] ; then git ls-files ; else  find . ; fi', 'sink': 'e'}))
+    command! GGFiles call fzf#run(fzf#wrap({'source': 'if [ -d .git ] ; then git ls-files -co --exclude-standard ; elif [ -d .hg ] ; then hg locate ; else  find . ; fi', 'sink': 'e'}))
 
     nnoremap <C-p> :GGFiles<cr>
     " nnoremap <C-p> :CtrlP<cr>
@@ -269,6 +276,7 @@ else
     nnoremap <Leader><Leader> :Commands<CR>
     nnoremap <leader>L :Lines<cr>
     nnoremap <leader>l :BLines<cr>
+    nnoremap <leader>ft :Filetype<cr>
     " TODO \* usage of word with :Lines and :Ag
 
     " Insert mode completion
@@ -414,6 +422,7 @@ nnoremap <leader>1 :colorscheme railscasts<cr>:AirlineTheme dark<cr>
 nnoremap <leader>2 :colorscheme molokai<cr>:AirlineTheme base16_monokai<cr>
 nnoremap <leader>3 :colorscheme themeinabox<cr>:AirlineTheme base16_eighties<cr>
 nnoremap <leader>4 :colorscheme themeinabox-light<cr>:AirlineTheme sol<cr>
+nnoremap <leader>5 :colorscheme themeinabox-transparent<cr>:AirlineTheme base16_eighties<cr>
 
 " get current syntax class
 nmap <leader>sy :echo "hi<" . synIDattr(synID(line("."),col("."),1),"name") . '> trans<'
@@ -436,7 +445,7 @@ nmap <leader>fun <Plug>ShowFunc<CR><C-w>H
 
 " duplicate lanes TODO
 nmap <leader>dd :s/\(^.*$\)/\1\r\1/<CR>:noh<CR>
-xmap <leader>dd :s/\(^.*$\)/\1\r\1/<CR>:noh<CR>
+xmap <leader>dd :'<,'>s/\(.*\)/\1\r\1/<CR>:noh<CR>
 
 " json indent
 command! -range -nargs=0 -bar JsonTool <line1>,<line2>!python -m json.tool
@@ -459,12 +468,25 @@ let g:clang_format#style_options = {
 augroup ClangFormatSettings
     autocmd!
     " map to <Leader>cf in C++ code
-    autocmd FileType c,cpp,objc nnoremap <buffer><Leader>cf :<C-u>ClangFormat<CR> zz
-    autocmd FileType c,cpp,objc vnoremap <buffer><Leader>cf :ClangFormat<CR> zz
+    autocmd FileType c,cpp,objc,java nnoremap <buffer><Leader>cf :<C-u>ClangFormat<CR> zz
+    autocmd FileType c,cpp,objc,java vnoremap <buffer><Leader>cf :ClangFormat<CR> zz
     " format line +-1
-    autocmd FileType c,cpp,objc nnoremap <buffer><Leader>cc :.-1,.+1ClangFormat<CR> zz
+    autocmd FileType c,cpp,objc,java nnoremap <buffer><Leader>cc :.-1,.+1ClangFormat<CR> zz
     " if you install vim-operator-user
-    autocmd FileType c,cpp,objc map <buffer><Leader>c <Plug>(operator-clang-format)
+    autocmd FileType c,cpp,objc,java map <buffer><Leader>c <Plug>(operator-clang-format)
+    autocmd FileType c,cpp syntax clear cppSTLconstant
+augroup END
+
+augroup filetypedetect
+    au BufRead,BufNewFile *.log set filetype=log
+    au BufReadPost,BufNewFile *.compositor set ft=compositor
+    au BufReadPost,BufNewFile *.material set ft=material
+    au BufReadPost,BufNewFile *.glsl,*.cg set ft=glsl
+    au BufReadPost,BufNewFile content.txt set ft=fitnesse
+    au BufReadPost,BufNewFile database.txt,*.conf set ft=conf
+    au BufReadPost,BufNewFile config.in set ft=kconfig
+    au BufReadPost,BufNewFile *.xml set tabstop=4
+    au BufReadPost,BufNewFile *.crt set ft=crt
 augroup END
 
 noremap <leader>cr :pyf ~/bin/clang-rename.py<cr>
@@ -520,8 +542,8 @@ nnoremap gV `[v`]  " This mapping allows you to reselect the text you just paste
 nnoremap gm :call cursor(0, len(getline('.'))/2)<CR>  " goto midle of line
 
 " simpler function movement
-nnoremap ]] ][
-nnoremap [[ []
+" nnoremap ]] ][
+" nnoremap [[ []
 
 " diff merge
 nnoremap <leader>d1 :diffget 1<CR>
@@ -573,7 +595,7 @@ nnoremap <leader>yj :YcmCompleter GoToDefinitionElseDeclaration<CR>
 nnoremap <leader>yg :YcmCompleter GoTo<CR>
 nnoremap <leader>yi :YcmCompleter GoToImplementationElseDeclaration<CR>
 nnoremap <leader>yt :YcmCompleter GetTypeImprecise<CR>
-nnoremap <leader>yd :YcmCompleter GetDocImprecise<CR>
+nnoremap <leader>yd :YcmCompleter GetDoc<CR>
 nnoremap <leader>yf :YcmCompleter FixIt<CR>
 nnoremap <leader>yr :YcmCompleter GoToReferences<CR>
 nnoremap <leader>ys :YcmDiags<CR>
@@ -597,6 +619,10 @@ endif
 let g:airline#extensions#tabline#enabled = 1
 "let g:airline#extensions#tabline#left_sep = ' '
 "let g:airline#extensions#tabline#left_alt_sep = '|'
+
+" tabline
+command! TablineON :set showtabline=1
+command! TablineOFF :set showtabline=0
 
 
 " multicursor
@@ -775,6 +801,7 @@ endif
 au InsertEnter * exec "inoremap <silent> " . g:UltiSnipsExpandTrigger     . " <C-R>=g:UltiSnips_Complete()<cr>"
 au InsertEnter * exec "inoremap <silent> " .     g:UltiSnipsJumpBackwardTrigger . " <C-R>=g:UltiSnips_Reverse()<cr>"
 
+inoremap <silent><C-X><C-U> <C-R>=g:UltiSnips_Complete()<CR>
 
 " -----------------------------------------------------------------------------
 " execute macro on visal range

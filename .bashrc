@@ -1,4 +1,5 @@
 export IS_WORK=0
+export IS_SIMPLE_FONT=0
 
 pathadd() {
     if [[ ":$PATH:" != *":$1:"* ]]; then
@@ -7,7 +8,7 @@ pathadd() {
 }
 pathadd "/home/${USER}/bin/"
 
-export TERM=rxvt-256color
+export TERM=rxvt-256color  
 
 #echo " Welcome corporate rat"
 #echo "         .~.    "
@@ -125,11 +126,6 @@ alias git-nossl="git -c http.sslVerify=false"
 # alias git-amend-now='GIT_COMMITTER_DATE="LC_ALL=en_US.utf8 date -R" git commit --amend --date "LC_ALL=en_US.utf8 date -R"'
 alias git-amend-now='export YESTERDAYEVENING=$(LC_ALL=en_US.utf8 date -R) export GIT_COMMITTER_DATE="$YESTERDAYEVENING" ; git commit --date "$YESTERDAYEVENING" --amend ; export GIT_COMMITTER_DATE=""'
 alias git-amend-yesterday='export YESTERDAYEVENING=$(LC_ALL=en_US.utf8 date --date="`echo $(( 18 + $RANDOM % 4 ))`:`echo $(( $RANDOM % 59))` yesterday") ; export GIT_COMMITTER_DATE="$YESTERDAYEVENING" ; git commit --date "$YESTERDAYEVENING" --amend ; export GIT_COMMITTER_DATE=""'
-
-#dictionary search
-alias look="look"
-alias f="fuck"
-alias c="clear"
 
 #dictionary search
 alias look="look"
@@ -334,13 +330,14 @@ alias locatef="cf"
 # Modified version where you can press
 #   - CTRL-O to open with `open` command,
 #   - CTRL-E or Enter key to open with the $EDITOR
+#   - anything else, cd to that file
 fo() {
   local out file key
-  IFS=$'\n' out=($(fzf-tmux --query="$1" --exit-0 --expect=ctrl-o,ctrl-e))
+  IFS=$'\n' out=$(fzf --query="$1" --exit-0 --expect=ctrl-o,ctrl-e)
   key=$(head -1 <<< "$out")
   file=$(head -2 <<< "$out" | tail -1)
   if [ -n "$file" ]; then
-    [ "$key" = ctrl-o ] && open "$file" || ${EDITOR:-vim} "$file"
+      [ "$key" = ctrl-o ] && open "$file" || [ "$key" = ctrl-e ] && ${EDITOR:-vim} "$file" || cd -- $(dirname "$file")
   fi
 }
 
@@ -351,6 +348,7 @@ fff() {
     cd -- $(dirname $file)
     echo $file
 }
+alias fdf="fff"
 
 # fkill - kill process
 fkill() {

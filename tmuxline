@@ -21,15 +21,20 @@ MEDIUM=110
 #   date_colour='colour252'
 # fi
 
+SPECIAL_CHAR=""
+if [ "$IS_SIMPLE_FONT" -eq "1" ] ; then
+    SPECIAL_CHAR=" "
+fi
+
 
 if [ "$WIDTH" -gt "$MEDIUM" ]; then
-  PROC="#[fg=colour240,bg=colour238,nobold,noitalics,nounderscore]#[fg=colour16,bg=colour240,bold,noitalics,nounderscore]$(uptime | rev | cut -d":" -f1 | rev | sed s/,\ /\ /g | sed s/,/./g)"
+  PROC="#[fg=colour240,bg=colour238,nobold,noitalics,nounderscore]${SPECIAL_CHAR}#[fg=colour16,bg=colour240,bold,noitalics,nounderscore]$(uptime | rev | cut -d":" -f1 | rev | sed s/,\ /\ /g | sed s/,/./g)"
   date_colour='colour252'
 fi
 
 if [ "$WIDTH" -ge "$SMALL" ]; then
-  UNAME="#[fg=colour160,bg=colour240,nobold,noitalics,nounderscore]#[fg=colour16,bg=colour160,bold,noitalics,nounderscore] $(uname -n)"
+  UNAME="#[fg=colour160,bg=colour240,nobold,noitalics,nounderscore]${SPECIAL_CHAR}#[fg=colour16,bg=colour160,bold,noitalics,nounderscore] $(uname -n)"
 fi
-TIME="#[fg=colour238,bg=colour234,nobold,noitalics,nounderscore]#[fg=colour252,bg=colour238,bold,noitalics,nounderscore] $(date +'%H:%M')"
+TIME="#[fg=colour238,bg=colour234,nobold,noitalics,nounderscore]${SPECIAL_CHAR}#[fg=colour252,bg=colour238,bold,noitalics,nounderscore] $(date +'%H:%M')"
 
 echo "$TIME $PROC $UNAME" | sed 's/ *$/ /g'

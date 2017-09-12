@@ -4,8 +4,8 @@ python
 #
 # https://github.com/cyrus-and/gdb-dashboard
 
-import ast
-import fcntl
+# import ast
+# import fcntl
 import os
 import re
 import struct
@@ -392,9 +392,9 @@ class Dashboard(gdb.Command):
     @staticmethod
     def get_term_width(fd=1):  # defaults to the main terminal
         # first 2 shorts (4 byte) of struct winsize
-        raw = fcntl.ioctl(fd, termios.TIOCGWINSZ, ' ' * 4)
-        height, width = struct.unpack('hh', raw)
-        return int(width)
+        # raw = fcntl.ioctl(fd, termios.TIOCGWINSZ, ' ' * 4)
+        # height, width = struct.unpack('hh', raw)
+        return int(os.popen('stty size', 'r').read().split()[1])
 
     @staticmethod
     def set_custom_prompt(dashboard):
@@ -725,7 +725,12 @@ or print (when the value is omitted) individual attributes."""
                     else:
                         try:
                             # convert and check the new value
-                            parsed = ast.literal_eval(new_value)
+                            try:
+                                import ast
+                                parsed = ast.literal_eval(new_value)
+                            except ImportError:
+                                parsed = eval(new_value)
+                            print("test: " + str(parsed))
                             value = attr_type(parsed)
                             if not attr_check(value):
                                 msg = 'Invalid value "{}" for "{}"'
@@ -1373,8 +1378,14 @@ dashboard registers
 dashboard assembly
 
 alias -a src = dashboard source -style context
-alias -a dbstackFull = db stack -style locals True
-alias -a dbstackArgs = db stack -style locals False
+echo \n
+echo == HELP ==\n
+echo Step: s -into, n -exit func, c -continue\n
+echo Breakpoints: b Class::method, info b -list breakpoints, delete num\n
+echo Misc: bt -backtrace, db -dashboard, l LINE -list code
+echo \n\n
+# alias -a dbstackFull = db stack -style locals True
+# alias -a dbstackArgs = db stack -style locals False
 
 # ------------------------------------------------------------------------------
 # Copyright (c) 2015-2016 Andrea Cardaci <cyrus.and@gmail.com>

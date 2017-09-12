@@ -25,6 +25,8 @@ $1 ${*:2} 2>&1 | \
     -e "s/\(^[^#^[]*\)CC /\1${BUILD}CC ${NORMAL}/g" \
     -e "s/\(^[^#^[]*\)CXX /\1${BUILD}CXX ${NORMAL}/g" \
     -e "s/\(^[^#^[]*\)CFG /\1${BUILD}CFG ${NORMAL}/g" \
+    -e "s/\(^[^#^[]*\)GEN  /\1${BUILD}GEN ${NORMAL}/g" \
+    -e "s/\(^[^#^[]*\)ANT /\1${BUILD}ANT ${NORMAL}/g" \
     -e "s/\(^[^#^[^U]*\)LD /\1${BUILD}LD ${NORMAL}/g" \
     -e "s/\(^[^#]*\)\(warning\)/\1${WARNING}\2${NORMAL}/gI" \
     -e "s/\(^[^#]*\)Note:/\1${GREY}Note:${NORMAL}/gI" \

@@ -4,6 +4,7 @@
 [core]
     # editor = vim
     pager = less -r
+    excludesfile = /home/xohnheis/bin/rc/gitignore_global
 
 [include]
     path = .gitconfig_work
@@ -70,7 +71,9 @@
 
     #graphs
     go = log --graph --pretty=format:'%C(yellow)%h%Creset%C(red bold)%d%Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' --decorate --abbrev-commit --all
+    god = log --graph --pretty=format:'%C(yellow)%h%Creset%C(red bold)%d%Creset %s %Cgreen(%ci) %C(blue)<%an>%Creset' --decorate --abbrev-commit
     g = log --oneline --decorate --graph --all
+    gbd = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(white)%d %C(bold black)%ai %C(reset)%n' --all
     gb = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(white)%d %C(bold black)%ar %C(reset)%n' --all
     g2 = log --graph --pretty=format':%s %C(bold blue)%an, %ar %Cgreen(%h)%Creset'
     g3 = log --pretty=format:"%Cgreen%h%Creset %ad %C(cyan)%an%Creset %s%C(red)%d%Creset" --graph --date=short
@@ -90,6 +93,8 @@
     mt = mergetool
     dt = difftool
     listExcluded = ls-files --other --ignored --exclude-standard
+    ls = ls-files -c --exclude-standard
+    ls-all = ls-files -co --exclude-standard
     logBranch = log --no-merges
     sh = show
     sss = show
