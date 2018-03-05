@@ -1,18 +1,15 @@
 [user]
-    name = kracejic
-    email = kracejic@gmail.com
+    # name = user
+    # email = user@server
 [core]
-    # editor = vim
     pager = less -r
-    excludesfile = /home/xohnheis/bin/rc/gitignore_global
+    excludesfile = ~/bin/rc/gitignore_global
 
 [include]
     path = .gitconfig_work
 
 [color]
-    branch = auto
-    diff = auto
-    status = auto
+    ui = auto
 
 [color "branch"]
     current = yellow reverse
@@ -31,7 +28,7 @@
     untracked = cyan
 [alias]
     #short status
-    s = status -s -b 
+    s = status -s -b
 
     #create new branch and check it out
     cb = checkout -b
@@ -40,20 +37,21 @@
     c = checkout
     p = push
     pu = pull --ff-only
-    
+
     f = fetch
     fa = fetch --all
-    
+
     cm = commit -am
     co = commit
     ca = commit --amend
-    
+
     #safe merging
     m = merge --ff-only
     mff = merge --ff-only
     mnff = merge --no-ff
-    
+
     rb = rebase
+    rba = rebase --autosquash
     rbi = rebase -i
     rbcont = rebase --continue
     rbas = rebase --autostash
@@ -70,9 +68,10 @@
     diff=diff --ws-error-highlight=all
 
     #graphs
-    go = log --graph --pretty=format:'%C(yellow)%h%Creset%C(red bold)%d%Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' --decorate --abbrev-commit --all
+    go = log --graph --pretty=format:'%C(yellow)%h%Creset%C(red bold)%d%Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' --decorate --abbrev-commit --all --author-date-order
     god = log --graph --pretty=format:'%C(yellow)%h%Creset%C(red bold)%d%Creset %s %Cgreen(%ci) %C(blue)<%an>%Creset' --decorate --abbrev-commit
     g = log --oneline --decorate --graph --all
+    gs = log --oneline --decorate --graph --all --author-date-order
     gbd = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(white)%d %C(bold black)%ai %C(reset)%n' --all
     gb = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(white)%d %C(bold black)%ar %C(reset)%n' --all
     g2 = log --graph --pretty=format':%s %C(bold blue)%an, %ar %Cgreen(%h)%Creset'
@@ -90,6 +89,12 @@
     gldiff = log --format=medium --decorate --graph -p  -c
     gldifff = log --format=medium --decorate --graph --follow -p  -c
 
+    # https://salferrarello.com/using-vim-view-git-commits/
+    # View commit with K (upper case k)
+    vim = "!git log --graph --oneline --decorate --all --pretty=format:'%h %d %s <%an>' | vim -R -c \"set filetype=git nowrap\" -"
+    nvim = "!git log --graph --oneline --decorate --all --pretty=format:'%h %d %s <%an>' | nvim -R -c \"set filetype=git nowrap\" -"
+
+
     mt = mergetool
     dt = difftool
     listExcluded = ls-files --other --ignored --exclude-standard
@@ -100,13 +105,15 @@
     sss = show
     ss = show --stat
     home = rev-parse --show-toplevel
-    movebranchto=branch -f
+    movebranchto = branch -f
+    moveto = reset --hard
 
     whois = "!sh -c 'git log -i -1 --pretty=\"format:%an <%ae>\n\" --author=\"$1\"' -"
     whatis = show -s --pretty='tformat:%h (%s, %ad)' --date=short
 
     #Human aliases :)
-    branches = branch -a
+    bb = for-each-ref --sort=-committerdate --format=\"%(color:bold black)%(authordate:relative)\t%(color:white)%(authorname)\t%(color:cyan bold)%(HEAD) %(color:green nobold)%(refname:short) %(color:white)-> %(upstream:short)\" refs/heads refs/remotes
+    branches = for-each-ref --sort=-committerdate --format=\"%(color:bold black)%(authordate:relative)\t%(color:white)%(authorname)\t%(color:cyan bold)%(HEAD) %(color:green nobold)%(refname:short) %(color:white)-> %(upstream:short)\" refs/heads refs/remotes
     tags = tag
     stashes = stash list
     remotes = remote -v
@@ -116,6 +123,17 @@
     discard = checkout --
     uncommit = reset --mixed HEAD~
     amend = commit --amend
+
+    # Add a file/directory to your .gitignore
+    ignore = "!f() { echo \"$1\" >> .gitignore; }; f"
+
+    # Show which commits are safe to amend/rebase
+    unpushed = log @{u}..
+    # Show what you've done since yesterday to prepare your standup
+    standup = "!git log --since yesterday --author $(git config user.email) --pretty=short --stat"
+    # Show the history difference between a local branche and its remote
+    divergence = "!git log --left-right --graph --cherry-pick --oneline $1...origin/$1"
+    # divergence = log --left-right --graph --cherry-pick --oneline $1...origin/$1
 
     # find file in repo
     find = "!git ls-files | grep -i"
@@ -130,27 +148,41 @@
     unassumeall = "!git assumed | xargs git update-index --no-assume-unchanged"
     assumeall = "!git st -s | awk {'print $2'} | xargs git assume"
 
-    #unstages changes in the index, discards changes in the working directory, and removes any new files.
+    # unstages changes in the index, discards changes in the working directory, and removes any new files.
     nevermindall = !git reset --hard HEAD && git clean -d -f
+    # as above, but keeps untraced
     nevermind = reset --hard HEAD
 
-    precommit = diff --cached --diff-algorithm=minimal -w
+    diffstaged = diff --cached --diff-algorithm=minimal -w
+
+    wip = commit --fixup HEAD
+    wipm = commit --squash HEAD -m
 
     # use git fixup COMMIT to change a specific "COMMIT", exactly like you would use git commit --amend to change the latest one.
     # You can use all git commit arguments, like -a, -p and filenames. It will respect your index, so you can use git add. It won't touch the changes you are not committing.
-    fixup = "!f() { TARGET=$(git rev-parse "$1"); git commit --fixup=$TARGET ${@:2} && EDITOR=true git rebase -i --autostash --autosquash $TARGET^; }; f"
+    fixuprb = "!f() { TARGET=$(git rev-parse "$1"); git commit --fixup=$TARGET ${@:2} && EDITOR=true git rebase -i --autostash --autosquash $TARGET^; }; f"
 
+    fixup = commit --fixup
+    squash = commit --squash
 
+[rebase]
+    autostash = true
+[fetch]
+    prune = true
 [push]
-    default = simple
+    default = current
     followTags = true
 [merge]
-	defaultToUpstream = true
-        tool = vimdiff
-        conflictstyle = diff3
+    defaultToUpstream = true
+    tool = vimdiff
+    conflictstyle = diff3
 [diff]
-	indentHeuristic = true
+    indentHeuristic = true
 [credential]
-	helper = store
+    helper = store
 [remote-hg]
-	track-branches = false
+    track-branches = false
+[help]
+    autocorrect = 30
+[commit]
+    verbose = 1

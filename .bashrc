@@ -1,3 +1,18 @@
+# default stuff
+
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+
+#------------------------------------------------------------------------------
+# custom
 export IS_WORK=0
 export IS_SIMPLE_FONT=0
 
@@ -8,7 +23,7 @@ pathadd() {
 }
 pathadd "/home/${USER}/bin/"
 
-export TERM=rxvt-256color  
+# export TERM=rxvt-256color
 
 #echo " Welcome corporate rat"
 #echo "         .~.    "
@@ -27,6 +42,16 @@ export TERM=rxvt-256color
 # Purple
 # PS1="\[\033[38;5;215m\]\u@\h \[$(tput sgr0)\]\[\033[38;5;12m\]\w \[$(tput sgr0)\]"
 
+# Run ssh agent only once, ignore gnome-keyring
+if ! pgrep -u "$USER" -f -x "^ssh-agent$" > /dev/null; then
+    echo "starting ssh agent"
+    ssh-agent > ~/.ssh-agent-thing
+    eval "$(<~/.ssh-agent-thing)" /dev/null
+fi
+# if [[ "$SSH_AGENT_PID" == "" ]]; then
+if [ -f ~/.ssh-agent-thing ]; then
+    eval "$(<~/.ssh-agent-thing)" > /dev/null
+fi
 
 alias ls="ls --color"
 alias l="ls -alh"
@@ -34,8 +59,12 @@ alias ll="ls -alh"
 alias lls="ls -lh --color"
 alias cd..="cd .."
 alias lsf="ls -al | grep -i"
-alias psf="ps -A | grep -i"
+alias psf="ps aux -A | grep -i"
+alias psmem="ps aux --sort -rss"
 alias grepp="grep -Rnsi"
+alias c="clear"
+
+alias g="git"
 
 alias makep="prettyfier make"
 alias cmakep="prettyfier cmake"
@@ -48,6 +77,24 @@ findfunction() {
 alias findn=findfunction
 alias findbig="find ./ -type f -print0 | xargs -0 du | sort -n | tail -n 100 | cut -f2 | xargs -I{} du -sh {}"
 alias findbigdir="find ./ -maxdepth 1 -type d -print0 | xargs -0 du --max-depth=1 | sort -n | tail -n 50 | tail -n +1 | cut -f2 | xargs -I{} du -sh {}"
+
+alias sc="sudo systemctl"
+alias scg="systemctl | grep "
+alias sj="sudo journalctl"
+alias sl="sudo journalctl"
+alias sjf="sudo journalctl -f"
+alias slf="sudo journalctl -f"
+alias sju="sudo journalctl -u"
+alias slu="sudo journalctl -u"
+alias sjuf="sudo journalctl -f -u"
+alias sluf="sudo journalctl -f -u"
+alias sjfu="sudo journalctl -f -u"
+alias slfu="sudo journalctl -f -u"
+
+# export http_proxy="http://proxy:9400"
+# export https_proxy="https://proxy:9400"
+# export ftp_proxy="ftp://proxy:9400"
+# export no_proxy="localhost,127.0.0.1,localaddress,.localdomain.com"
 
 # same installation commands
 if [ -e /etc/yum.conf ] ; then
@@ -71,8 +118,8 @@ if [ -e /etc/pacman.conf ] ; then
     alias ashowlocal="pacman --color always -Qi"
     alias alistall="pacman --color always -Q"
     alias alistallexplicit="pacman --color always -Qqe"
-    alias update="sudo pacman -Qu"
-    alias upgrade="sudo pacman -Syyu"
+    alias update="sudo pacman --color always -Qu"
+    alias upgrade="sudo pacman --color always -Syyu"
 fi
 if [ -d /etc/apt ] ; then
     alias ainstall="sudo apt-get install"
@@ -112,7 +159,6 @@ alias stailf="sudo supervisorctl tail -f"
 alias sgogo="sudo supervisorctl reread && sudo supervisorctl update && echo --wait-- && sleep 3 && sudo supervisorctl status"
 
 # git shortcuts
-alias g="git"
 alias gf="git fetch"
 alias gfa="git fetch --all"
 alias gs="git s"
@@ -127,15 +173,21 @@ alias git-nossl="git -c http.sslVerify=false"
 alias git-amend-now='export YESTERDAYEVENING=$(LC_ALL=en_US.utf8 date -R) export GIT_COMMITTER_DATE="$YESTERDAYEVENING" ; git commit --date "$YESTERDAYEVENING" --amend ; export GIT_COMMITTER_DATE=""'
 alias git-amend-yesterday='export YESTERDAYEVENING=$(LC_ALL=en_US.utf8 date --date="`echo $(( 18 + $RANDOM % 4 ))`:`echo $(( $RANDOM % 59))` yesterday") ; export GIT_COMMITTER_DATE="$YESTERDAYEVENING" ; git commit --date "$YESTERDAYEVENING" --amend ; export GIT_COMMITTER_DATE=""'
 
+alias torrent="transmission-cli -w ~/torrent/ "
+
 #dictionary search
 alias look="look"
+
+eval $(thefuck --alias)
 alias f="fuck"
-alias c="clear"
 alias makev="make SHELL='sh -x'"
 
 alias PI="projectInfo"
 alias PIF="projectInfo fetch"
 alias PIf="projectInfo fetch"
+
+alias redshiftus="redshift -l 0.236966:-97.734886"
+alias redshiftcz="redshift -l 49.194991:16.609631"
 
 ## set some other defaults ##
 alias df="df -hT"
@@ -145,9 +197,6 @@ alias less="less -r"
 alias grep='grep --color'
 alias grep_="grep --color=never"
 alias grep="grep --color=always"
-
-alias redshiftus="redshift -l 0.236966:-97.734886"
-alias redshiftcz="redshift -l 49.194991:16.609631"
 
 alias ..='cd ..'
 alias ...='cd ../../'
@@ -168,6 +217,8 @@ alias ports='netstat -tulanp'
 alias rapache2="sudo service apache2 restart"
 alias rsshd="sudo service ssh restart"
 
+alias reveal="nautilus . &"
+
 # for badly configured servers
 alias ssh_nopubkey="ssh -o PubkeyAuthentication=no"
 
@@ -180,7 +231,7 @@ alias psmem='ps auxf | sort -nr -k 4'
 alias psmem10='ps auxf | sort -nr -k 4 | head -10'
 
 alias updateycm='cd ~/.vim/bundle/YouCompleteMe && git pull && git pull --recurse-submodules && ./install.py --clang-completer'
-alias updateycmall='cd ~/.vim/bundle/YouCompleteMe && git pull && git pull --recurse-submodules && ./install.py --clang-completer --gocode-completer --tern-completer --tern-completer'
+alias updateycmall='cd ~/.vim/bundle/YouCompleteMe && git pull && git pull --recurse-submodules && ./install.py --clang-completer --gocode-completer --tern-completer'
 
 ## get top process eating cpu ##
 alias pscpu='ps auxf | sort -nr -k 3'
@@ -192,6 +243,7 @@ alias cpuinfo='lscpu'
 weather() {
 curl -s wttr.in/$1
 }
+
 
 # nice, more readable manual! This is a must
 man() {
@@ -205,8 +257,6 @@ man() {
     LESS_TERMCAP_us=$'\e[04;38;5;146m' \
     man "$@"
 }
-
-alias reveal="nautilus . &"
 
 # load custom promt and commands
 if [ -f "$HOME/.promt" ]; then
@@ -222,13 +272,15 @@ set -o vi
 # http://stackoverflow.com/questions/4200800/in-bash-how-do-i-bind-a-function-key-to-a-command
 # http://www.gnu.org/software/bash/manual/html_node/Bash-Builtins.html
 # Not needed on most system, needed on ubuntu... :(
-if [ $(hostname) = "chirm" ] ; then 
-    bind -m vi-insert '"\e[1~":"\eI"'
-    bind -m vi-insert '"\e[4~":"\eA"'
-    bind -m vi '"\e[1~":"^"'
-    bind -m vi '"\e[4~":"$"'
+if [ -f /etc/lsb-release ]; then
+    if [ $(grep Ubuntu /etc/lsb-release | wc -l) != "0" ] ; then
+        bind -m vi-insert '"\e[1~":"\eI"'
+        bind -m vi-insert '"\e[4~":"\eA"'
+        bind -m vi '"\e[1~":"^"'
+        bind -m vi '"\e[4~":"$"'
+    fi
 fi
-# page up and page down 
+# page up and page down
 bind -m vi '"\e[5~":"\e[A"'
 bind -m vi-insert '"\e[5~":"\e[A"'
 bind -m vi '"\e[6~":"\e[B"'
@@ -275,9 +327,7 @@ fsroot () {
 }
 
 #------------------------------------------------------------------------------
-# editors
-
-#select best editor
+# select best editor
 if hash nvim 2>/dev/null; then
     export EDITOR=nvim
     export SUDO_EDITOR=nvim

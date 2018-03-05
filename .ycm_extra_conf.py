@@ -1,6 +1,6 @@
 # This is an attempt on universal .ycm_extra_conf.py
-# You can have one in your home and point to it from your .vimrc with: 
-#    let g:ycm_global_ycm_extra_conf = '~/path/.ycm_extra_conf.py'  
+# You can have one in your home and point to it from your .vimrc with:
+#    let g:ycm_global_ycm_extra_conf = '~/path/.ycm_extra_conf.py'
 
 # Sources (from oldest to newest):
 # https://github.com/Valloric/ycmd/blob/master/cpp/ycm/.ycm_extra_conf.py

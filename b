@@ -5,6 +5,19 @@ retval=1
 args=$*
 pretty=~/bin/prettyfier
 
+if [ -f b ]; then
+    $pretty bash ./b $*
+    retval=$?
+    exit $retval
+fi
+
+if [ -f b.py ]; then
+    python3 ./b $*
+    retval=$?
+    exit $retval
+fi
+
+
 # short arguments
 if [[ $# > 0 ]]; then
     case $1 in
@@ -67,6 +80,9 @@ elif [ -f pom.xml ]; then
     export JAVA_TOOL_OPTIONS=-Dfile.encoding=ISO-8859-1
     $pretty mvn $args -Dmaven.test.skip=true
     retval=$?
+else
+    echo "could not identify build system"
+    exit 1
 fi
 
 exit $retval

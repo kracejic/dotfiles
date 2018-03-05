@@ -1,10 +1,13 @@
 #!/bin/bash
 GREEN=`echo -e '\033[0;32m'`
 GREENBOLD=`echo -e '\033[1;32m'`
-RED=`echo -e '\033[1;31m'`
+RED=`echo -e '\033[0;31m'`
+REDBOLD=`echo -e '\033[1;31m'`
 WARNING=`echo -e '\033[1;35m'`
 FILE=`echo -e '\033[1;37m'`
 GREY=`echo -e '\033[2;37m'`
+GREYBOLD=`echo -e '\033[1;37m'`
+YELLOWBOLD=`echo -e '\033[1;33m'`
 KEYWORD=`echo -e '\033[2;36m'`
 BUILD=`echo -e '\033[0;35m'`
 BLUE=`echo -e '\033[1;34m'`
@@ -15,8 +18,10 @@ NORMAL=`echo -e '\033[m'`
 
 $1 ${*:2} 2>&1 | \
     sed -u -e "s/\(make\[.*\)/${GREY}\1${NORMAL}/gI" \
+    -e "s/\(No package .* found\)/${RED}\1${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)\(\berrors*\b\)/\1${REDBOLD}\2${NORMAL}/gI" \
+    -e "s/\(^[^#]*\)\(\bwarnings*\b\)/\1${WARNING}\2${NORMAL}/gI" \
     -e "s/\(\S*:[0-9]*:[^0-9]\)/${FILE}\1${NORMAL}/gI" \
-    -e "s/\(^[^#]*\)\(error\)/\1${RED}\2${NORMAL}/gI" \
     -e "s/\(^[C^#^-]*\)make /\1${KEYWORD}make ${NORMAL}/gI" \
     -e "s/\(^[^#^-]*\)\(rpm\) /\1${KEYWORD}\2 ${NORMAL}/gI" \
     -e "s/\(^[^#^[]*\)cp /\1${KEYWORD}cp ${NORMAL}/gI" \
@@ -28,32 +33,42 @@ $1 ${*:2} 2>&1 | \
     -e "s/\(^[^#^[]*\)GEN  /\1${BUILD}GEN ${NORMAL}/g" \
     -e "s/\(^[^#^[]*\)ANT /\1${BUILD}ANT ${NORMAL}/g" \
     -e "s/\(^[^#^[^U]*\)LD /\1${BUILD}LD ${NORMAL}/g" \
-    -e "s/\(^[^#]*\)\(warning\)/\1${WARNING}\2${NORMAL}/gI" \
     -e "s/\(^[^#]*\)Note:/\1${GREY}Note:${NORMAL}/gI" \
-    -e "s/\(^###*\) \(.*\)/${GREY}\1${BLUE}\2${NORMAL}/gI" \
+    -e "s/\(^###*\) \(.*\)/${GREY}\1${BLUE} \2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Built.*$\)/\1${GREY}\2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Bui.*$\)/\1${GREEN}\2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Lin.*$\)/\1${GREENBOLD}\2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( .*$\)/\1${BLUE}\2${NORMAL}/gI" \
     -e "s/ Passed/ ${GREEN}Passed${NORMAL}/gI" \
-    -e "s/ Failed:/ ${RED}Failed:${NORMAL}/gI" \
+    -e "s/ Failed:/ ${REDBOLD}Failed:${NORMAL}/gI" \
     -e "s/\( Create package using.*$\)/${PURPLEBOLD}\1${NORMAL}/gI" \
     -e "s/\(CPack:\)/${GREY}\1${NORMAL}/gI" \
-    -e "s/\([1-9][0-9]*\) Failed/\1${RED} Failed${NORMAL}/gI" \
-    -e "s/\*\*\*Failed /${RED}\*\*\*Failed${NORMAL} /g" \
+    -e "s/\([1-9][0-9]*\) Failed/\1${REDBOLD} Failed${NORMAL}/gI" \
+    -e "s/\*\*\*Failed /${REDBOLD}\*\*\*Failed${NORMAL} /g" \
     -e "s/\(-- \)Installing/\1${PURPLEBOLD}Installing${NORMAL}/g" \
     -e "s/\(-- \)Up-to-date/\1${GREY}Up-to-date${NORMAL}/g" \
     -e "s/\(-- .*\)YES/\1${GREEN}YES${NORMAL}/g" \
-    -e "s/\(-- .*\)NO\b/\1${RED}NO${NORMAL}/g" \
+    -e "s/\(-- .*\)ON/\1${GREEN}ON${NORMAL}/g" \
+    -e "s/\(-- .*\)NO\b/\1${REDBOLD}NO${NORMAL}/g" \
+    -e "s/\(-- .*\)OFF\b/\1${REDBOLD}OFF${NORMAL}/g" \
     -e "s/\(-- .*\)\(Found \S*\)/\1${PURPLE}\2${NORMAL}/g" \
     -e "s/\(--\s\)\(.*done\)/\1${GREEN}\2${NORMAL}/g" \
     -e "s/\(^-- \)/${GREY}--${NORMAL} /g" \
     -e "s/\(^\s*\^\)\([~]*\)/${PURPLEBOLD}\1${GREY}\2${NORMAL}/g" \
     -e "s/\(^100%\) tests passed/${GREEN}\1 tests passed${NORMAL}/g" \
-    -e "s/\(^[0-9]*%\) tests passed/${RED}\1 tests passed${NORMAL}/g" \
+    -e "s/\(^[0-9]*%\) tests passed/${REDBOLD}\1 tests passed${NORMAL}/g" \
     -e "s/\(^\[*INFO:*\]*\)/${GREY}\1${NORMAL}/gI" \
+    -e "s/\(PASS[ed]*\)/${GREEN}\1${NORMAL}/gI" \
     -e "s/\(SUCCESS\)/${GREEN}\1${NORMAL}/gI" \
-    -e "s/\(FAILURE\)/${RED}\1${NORMAL}/gI" \
+    -e "s/\(FAIL[ed]*\)/${REDBOLD}\1${NORMAL}/g" \
+    -e "s/\(FAILURE\)/${REDBOLD}\1${NORMAL}/g" \
     -e "s/\(^Downloading:\)\(.*\)$/${BLUE}\1${GREY}\2${NORMAL}/gI" \
     -e "s/\(^Downloaded:\)\(.*\)$/${GREEN}\1${GREY}\2${NORMAL}/gI" \
+    -e "s/\(UNKNOWN\)/${GREYBOLD}\1${NORMAL}/gI" \
+    -e "s/\(WARNING\)/${YELLOWBOLD}\1${NORMAL}/g" \
+    -e "s/\(OK\)/${GREENBOLD}\1${NORMAL}/g" \
+    -e "s/\(True\)/${GREEN}\1${NORMAL}/gI" \
+    -e "s/\(ERROR\)/${REDBOLD}\1${NORMAL}/g" \
+    -e "s/\(False\)/${RED}\1${NORMAL}/gI" \
+    -e "s/\([{},'\"=]\)/${GREY}\1${NORMAL}/gI" \
     -e "s/^[+]/${PURPLEBOLD}+${NORMAL}/gI" ; test ${PIPESTATUS[0]} -eq 0

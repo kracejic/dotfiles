@@ -15,6 +15,17 @@ Plugin 'VundleVim/Vundle.vim'
 " Keep Plugin commands between vundle#begin/end.
 Plugin 'tpope/vim-fugitive'
 
+" :GV - commit browser
+" :GV! only commits for current file
+"  o or <cr> on a commit to display the content of it
+"  o or <cr> on commits to display the diff in the range
+"  O opens a new tab instead
+"  gb for :Gbrowse
+"  ]] and [[ to move between commits
+"  . to start command-line with :Git [CURSOR] SHA à la fugitive
+"  q to close
+Plugin 'junegunn/gv.vim'
+
 Plugin 'tpope/vim-surround'
 
 
@@ -43,17 +54,15 @@ Plugin 'vim-scripts/argtextobj.vim'
 Plugin 'kana/vim-textobj-user'
 " f F text objects
 Plugin 'kana/vim-textobj-function'
-
 " User defined operators/actions
 Plugin 'kana/vim-operator-user'
-
 Plugin 'michaeljsmith/vim-indent-object'
+
 
 Plugin 'vimwiki/vimwiki'
 
+" gs
 Plugin 'christoomey/vim-sort-motion'
-
-Plugin 'itchyny/calendar.vim'
 
 Plugin 'tomasr/molokai'
 
@@ -73,6 +82,7 @@ Plugin 'kshenoy/vim-signature'
 Plugin 'derekwyatt/vim-fswitch'
 
 Plugin 'rhysd/vim-clang-format'
+Plugin 'sbdchd/neoformat'
 
 " session management
 Plugin 'tpope/vim-obsession'
@@ -100,21 +110,35 @@ Plugin 'joereynolds/gtags-scope'
 " search with :Ack [options] {pattern] [{directories}]
 Plugin 'mileszs/ack.vim'
 
+" :Dox command generates stub for doxygen doc in C++, etc
 Plugin 'vim-scripts/DoxygenToolkit.vim'
 
-
+" :Search :SearchBuffers :SearchReset :SearchBuffersReset
 Plugin 'vim-scripts/MultipleSearch'
 
+" fast searching
 Plugin 'junegunn/fzf'
 Plugin 'junegunn/fzf.vim'
 
+" ga / gaip= align in paragraph around char =
 Plugin 'junegunn/vim-easy-align'
 
+" :ColorToggle
 Plugin 'lilydjwg/colorizer'
 
+" Syntaxes for a lot of languages
 Plugin 'sheerun/vim-polyglot'
 
+" :DevDocs ---
 Plugin 'rhysd/devdocs.vim'
+
+Plugin 'vim-scripts/visual-increment'
+
+" :Delete, :Unlink, :Move, :Rename, :Chmod, :Mkdir, :Find, :Locate, :SudoWrite, :SudoEdit
+Plugin 'tpope/vim-eunuch'
+
+" Plugin 'artur-shaik/vim-javacomplete2'
+
 
 let g:colorizer_startup = 0
 
@@ -130,7 +154,7 @@ if hostname() =~ "ankh"
 endif
 if hostname() =~ "efebe"
     Plugin 'Valloric/YouCompleteMe'
-    Plugin 'tbabej/taskwiki'
+    " Plugin 'tbabej/taskwiki'
 endif
 if hostname() =~ "krull"
     Plugin 'Valloric/YouCompleteMe'
@@ -140,15 +164,19 @@ if hostname() =~ "tezuman"
     Plugin 'Valloric/YouCompleteMe'
 endif
 if hostname() =~ "chirm"
-    " Plugin 'nfvs/vim-perforce'
-    Plugin 'MrAshLinux/vim-perforce'
+    " Plugin 'MrAshLinux/vim-perforce'
     Plugin 'Valloric/YouCompleteMe'
     Plugin 'tbabej/taskwiki'
 endif
 
 Plugin 'kracejic/themeinabox.vim'
 
+" Bin
+" Plugin 'itchyny/calendar.vim'
 " Plugin 'Yggdroot/indentLine'
+
+
+
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -168,6 +196,9 @@ filetype plugin on
 " see :h vundle for more details or wiki for FAQ
 " Put your non-Plugin stuff after this line
 
+" -----------------------------------------------------------------------------
+" Key shortcuts in VIM
+" !! bash output on screen, current line is stdin
 
 
 "General
@@ -178,6 +209,7 @@ set wrap  "enable wraping
 set linebreak   "Break lines at word (requires Wrap lines)
 set nolist         " list disables linebreak
 set scrolloff=5         " 2 lines above/below cursor when scrolling
+set noswapfile  " turn off swapfiles
 
 " :imap jj <Esc>
 :imap <C-L> <Esc>
@@ -202,7 +234,6 @@ set incsearch   "Searches for strings incrementally
 nmap \q :nohlsearch<CR>
 nnoremap <leader><space> :noh<cr>
 
-set spellfile=~/.vim/spell.misc.utf-8.add
 
 set virtualedit=onemore  "allow to go one character behind the end of the line
 set autoindent  "Auto-indent new lines
@@ -230,21 +261,21 @@ set listchars=tab:>-,trail:~,extends:>,precedes:<
 set tags=./tags;/   "This will look in the current directory for 'tags', and work up the tree towards root until one is found.
 set cscopetag
 
-" CtrlP settings
-let g:ctrlp_match_window = 'top,order:ttb,max:15,results:15'
-let g:ctrlp_follow_symlinks = 1
-"let g:ctrlp_switch_buffer = 0
-"let g:ctrlp_working_path_mode = 0
-let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
-let g:ctrlp_custom_ignore = '\v[\/](node_modules)$'
-let g:ctrlp_working_path_mode = 'a'
-
+"Fuzzy search
 if isdirectory("/mingw32")
+    " CtrlP settings
+    let g:ctrlp_match_window = 'top,order:ttb,max:15,results:15'
+    let g:ctrlp_follow_symlinks = 1
+    "let g:ctrlp_switch_buffer = 0
+    "let g:ctrlp_working_path_mode = 0
+    let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files -co --exclude-standard']
+    let g:ctrlp_custom_ignore = '\v[\/](node_modules)$'
+    let g:ctrlp_working_path_mode = 'a'
+
     nnoremap <leader>. :CtrlPBufTag<cr>
     nnoremap <leader>, :CtrlPTag<cr>
     nnoremap <leader>q :CtrlPQuickfix<cr>
     nnoremap <Leader>ss :CtrlPObsession<CR>
-    nnoremap <tab> :CtrlPBuffer<CR> " TODO change, same as ctrl-i
     nnoremap <leader>a :CtrlPBuffer<CR>
     nnoremap <leader><tab> :CtrlPBuffer<CR>
 else
@@ -269,7 +300,6 @@ else
     nnoremap <leader>, :Tags<cr>
     nnoremap <leader>q :CtrlPQuickfix<cr>
     nnoremap <Leader>ss :CtrlPObsession<CR>
-    nnoremap <tab> :Buffers<CR>
     nnoremap <leader>a :Buffers<CR>
     nnoremap <leader><tab> :Buffers<CR>
     " fzf
@@ -287,7 +317,13 @@ else
 endif
 
 command! Ctagsgenerate :!ctags -R .
+command! Gtagsgenerate :!gtags
+" let GtagsCscope_Auto_Load = 1
+" find references
+nnoremap <leader>ygr "zyiw:cs find c <C-r>z<CR>
 
+" Git-fugitive stuff
+nmap <leader>g :Gstatus<cr>gg<C-n>
 
 " open header fswitch
 nmap <silent> <F4> :FSHere<cr>
@@ -314,9 +350,18 @@ let g:tagbar_sort = 0
 " for pasting in terminal
 set pastetoggle=<F2>
 
+nnoremap <leader>a <C-A>
+" vnoremap <leader>a <Plug>VisualIncrement
+vnoremap <silent> <Plug><leader>a :<C-U>call <SID>doincrement(v:count1)<CR>
+" increment numbers
+noremap + <c-a>
+noremap - <c-x>
+
+
+
+" Splits
 set splitbelow    " more natural split opening
 set splitright    " more natural split opening
-
 "split movement
 nnoremap <C-h> <C-w>h
 nnoremap <C-k> <C-w>k
@@ -335,16 +380,15 @@ nnoremap <C-w><C-w><C-w>l <C-w>>
 nnoremap <C-w><C-w><C-w>k <C-w>-
 nnoremap <C-w><C-w><C-w>j <C-w>+
 
+
 " buffers
-:nmap \] :bnext<CR>
-:nmap \[ :bprev<CR>
-:nmap <leader>w :bd<CR>
-:command! Bda :bufdo bd
-
-:command! Bd bp|bd<space>#
-
-:nnoremap <leader>W :Bd<CR>
-
+nmap \] :bnext<CR>
+nmap \[ :bprev<CR>
+nmap <leader>w :bd<CR>
+command! Bda :bufdo bd
+nnoremap <bs> <c-^>
+command! Bd bp|bd<space>#
+nnoremap <leader>W :Bd<CR>
 
 " syntax enable           " enable syntax processing
 syntax on           " enable syntax processing
@@ -354,25 +398,8 @@ syntax on           " enable syntax processing
 let g:SignatureMarkTextHLDynamic = 1
 let g:SignatureMarkerTextHLDynamic = 1
 
-" " copy to buffer for sharing between vim sessions
-" vmap <C-c> :w! ~/.vimbuffer<CR>
-" nmap <C-c> :.w! ~/.vimbuffer<CR>
-" " paste from buffer
-" map <C-p> :r ~/.vimbuffer<CR>
-
-
 "reload vimrc
 :nmap \rv :source $MYVIMRC<CR>
-
-" culumn guide
-" if (exists('+colorcolumn'))
-"     set colorcolumn=80
-"     highlight ColorColumn ctermbg=1
-" endif
-
-" match the next brace
-" nnoremap <tab> %
-" vnoremap <tab> %
 
 "strip whitespace
 nnoremap <leader>sw :%s/\s\+$//<cr>:let @/=''<CR>
@@ -389,21 +416,26 @@ command! WTable :VimwikiTable
 command! WToc :VimwikiTOC
 command! WTags :VimwikiRebuildTags
 
+
 if hostname() == "MD1KQAXC"
     let g:vimwiki_list = [{'path': '/d/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '/d/cloud/space/siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
 elseif hostname() =~ "chirm"
-    let g:vimwiki_list = [{'path': '~/ownCloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '~/ownCloud/space/siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
+    let g:vimwiki_list = [{'path': '~/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '~/cloud/space/siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
+elseif hostname() =~ "ankh"
+    let g:vimwiki_list = [{'path': '~/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '~/cloud/space/siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
 else
-    let g:vimwiki_list = [{'path': '~/ownCloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
+    let g:vimwiki_list = [{'path': '~/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
 endif
 au BufNewFile,BufRead *.mdw set nowrap
 
-" let g:vimwiki_list = [{'path': '~/ownCloud/space/', 'path_html': '~/ownCloud/space_html/'},{'path': '~/test_vim/', 'syntax': 'markdown', 'ext': '.md'}, {'path': '~/ownCloud/space/source/', 'syntax': 'markdown', 'ext': '.md'}]
 
+
+" z= choose spell          ]s [s move 
+" zg add to spellfile      zw add as bad,           zug/zuw remove from spellfile
+set spellfile=~/.vim/spell.misc.utf-8.add
 command! Spellen :setlocal spell spelllang=en_us
 command! Spellcs :setlocal spell spelllang=cs
 command! Spellnone :setlocal nospell
-
 
 let g:calendar_google_calendar = 1
 
@@ -447,8 +479,16 @@ nmap <leader>fun <Plug>ShowFunc<CR><C-w>H
 nmap <leader>dd :s/\(^.*$\)/\1\r\1/<CR>:noh<CR>
 xmap <leader>dd :'<,'>s/\(.*\)/\1\r\1/<CR>:noh<CR>
 
+" New line in normal mode
+nnoremap <CR> :<c-u>put =repeat(nr2char(10), v:count1)<cr>
+
 " json indent
-command! -range -nargs=0 -bar JsonTool <line1>,<line2>!python -m json.tool
+command! -range -nargs=0 -bar IndentJson <line1>,<line2>!python -m json.tool
+command! -range -nargs=0 -bar JsonIndent <line1>,<line2>!python -m json.tool
+
+"xml indent
+command! IndentXml :silent %!xmllint --encode UTF-8 --format -
+command! XmlIndent :silent %!xmllint --encode UTF-8 --format -
 
 " CLANG FORMAT
 " default settings
@@ -467,15 +507,43 @@ let g:clang_format#style_options = {
 
 augroup ClangFormatSettings
     autocmd!
-    " map to <Leader>cf in C++ code
-    autocmd FileType c,cpp,objc,java nnoremap <buffer><Leader>cf :<C-u>ClangFormat<CR> zz
-    autocmd FileType c,cpp,objc,java vnoremap <buffer><Leader>cf :ClangFormat<CR> zz
-    " format line +-1
-    autocmd FileType c,cpp,objc,java nnoremap <buffer><Leader>cc :.-1,.+1ClangFormat<CR> zz
     " if you install vim-operator-user
-    autocmd FileType c,cpp,objc,java map <buffer><Leader>c <Plug>(operator-clang-format)
+    autocmd FileType c,cpp,objc,java,javascript map <buffer><Leader>c <Plug>(operator-clang-format)
     autocmd FileType c,cpp syntax clear cppSTLconstant
+
+    autocmd FileType vimwiki nmap <leader>tts :TaskWikiMod +sprint<CR>
+    autocmd FileType vimwiki nmap <leader>ttS :TaskWikiMod -sprint<CR>
 augroup END
+
+" Neoformat
+let g:neoformat_enabled_python = ['autopep8']
+
+nnoremap <Leader>cf :Neoformat<CR>
+vnoremap <Leader>cf :Neoformat<CR>
+" format line +-1
+autocmd FileType c,cpp,objc,java,javascript nnoremap <Leader>cc :.-1,.+1Neoformat<CR>
+
+
+" markdown ctags
+let g:tagbar_type_markdown = {
+    \ 'ctagstype' : 'vimwiki',
+    \ 'kinds' : [
+        \ 'h:Heading_L1',
+        \ 'i:Heading_L2',
+        \ 'k:Heading_L3'
+    \ ]
+\ }
+let g:tagbar_type_markdown = {
+    \ 'ctagstype' : 'markdown',
+    \ 'kinds' : [
+        \ 'h:Heading_L1',
+        \ 'i:Heading_L2',
+        \ 'k:Heading_L3'
+    \ ]
+\ }
+
+
+" autocmd FileType java setlocal omnifunc=javacomplete#Complete
 
 augroup filetypedetect
     au BufRead,BufNewFile *.log set filetype=log
@@ -489,12 +557,12 @@ augroup filetypedetect
     au BufReadPost,BufNewFile *.crt set ft=crt
 augroup END
 
-noremap <leader>cr :pyf ~/bin/clang-rename.py<cr>
 
 let g:syntastic_cpp_compiler_options = "-std=c++14"
 " add constant
 nmap <leader>acr /[,)]<CR>:nohlsearch<CR>Bhi&<ESC>?[,(]<CR>:nohlsearch<CR>wiconst <ESC>
 
+noremap <leader>cr :pyf ~/bin/clang-rename.py<cr>
 
 :nmap \e :NERDTreeToggle<CR>
 ":nmap \t w setlocal wrap!<CR>:setlocal wrap?
@@ -509,6 +577,7 @@ set foldenable          " enable folding
 set foldlevelstart=10   " open most folds by default
 set foldnestmax=10      " 10 nested fold max
 nnoremap <space> za
+nnoremap z<space> zA
 set foldmethod=indent   " fold based on indent level
 
 
@@ -534,21 +603,17 @@ nnoremap <up> gk
 " move to beginning/end of line
 nmap <Home> ^
 nmap <End> $
-" $/^ doesn't do anything
-" nnoremap $ <nop>
-" nnoremap ^ <nop>
 
 nnoremap gV `[v`]  " This mapping allows you to reselect the text you just pasted:
 nnoremap gm :call cursor(0, len(getline('.'))/2)<CR>  " goto midle of line
-
-" simpler function movement
-" nnoremap ]] ][
-" nnoremap [[ []
 
 " diff merge
 nnoremap <leader>d1 :diffget 1<CR>
 nnoremap <leader>d2 :diffget 2<CR>
 nnoremap <leader>d3 :diffget 3<CR>
+
+command! Diffstart :windo diffthis
+command! Diffstop :diffoff!
 
 "Advanced
 set undolevels=1000 "Number of undo levels
@@ -564,11 +629,6 @@ set autoread
 au CursorHold * checktime
 
 set tabpagemax=50 " max number of pages
-
-
-" syntax highlighting for markdown
-" au BufNewFile,BufFilePre,BufRead *.md set filetype=markdown
-
 
 colorscheme themeinabox
 let g:airline_theme='base16_eighties'
@@ -588,7 +648,7 @@ command! W :w
 " :h ins-completion.
 " :YcmDiags - errors
 let g:ycm_confirm_extra_conf = 0
-let g:ycm_global_ycm_extra_conf = '~/bin/rc/.ycm_extra_conf.py' 
+let g:ycm_global_ycm_extra_conf = '~/bin/rc/.ycm_extra_conf.py'
 let g:ycm_error_symbol = '%'
 let g:ycm_warning_symbol = '%'
 nnoremap <leader>yj :YcmCompleter GoToDefinitionElseDeclaration<CR>
@@ -608,6 +668,34 @@ nnoremap <F9> :YcmCompleter GetDocImprecise<CR>
 
 
 " airline
+let g:airline_mode_map = {
+  \ '__' : '-',
+  \ 'n'  : 'N',
+  \ 'i'  : 'I',
+  \ 'R'  : 'R',
+  \ 'c'  : 'C',
+  \ 'v'  : 'V',
+  \ 'V'  : 'V',
+  \ '' : 'V',
+  \ 's'  : 'S',
+  \ 'S'  : 'S',
+  \ '' : 'S',
+  \ }
+let g:airline#extensions#default#section_truncate_width = {
+  \ 'b': 79,
+  \ 'x': 60,
+  \ 'y': 88,
+  \ 'z': 60,
+  \ 'warning': 80,
+  \ 'error': 80,
+  \ }
+let w:airline_skip_empty_sections = 1
+" let g:airline_section_b=' %{fugitive#head()}'
+let g:airline#extensions#hunks#enabled = 0
+let g:airline#extensions#wordcount#enabled = 0
+let g:airline_section_z='☰ %l/%L:%c'
+let g:airline#extensions#branch#format = 2
+
 set laststatus=2
 if hostname() =~ "ankh"
     let g:airline_powerline_fonts = 1
@@ -648,9 +736,8 @@ nmap ss <Plug>(easymotion-s2)
 " Turn on case insensitive feature
 let g:EasyMotion_smartcase = 1
 
-" JK motions: Line motions
-map <Leader>j <Plug>(easymotion-j)
-map <Leader>k <Plug>(easymotion-k)
+vnoremap <leader>j :m '>+1<CR>gv=gv
+vnoremap <leader>k :m '<-2<CR>gv=gv
 
 " visual shifting (builtin-repeat)
 vnoremap < <gv
@@ -708,6 +795,8 @@ nnoremap cQ :call SetupCR()<CR>#``qz
 vnoremap <expr> cq ":\<C-u>call SetupCR()\<CR>" . "gv" . g:mc . "``qz"
 vnoremap <expr> cQ ":\<C-u>call SetupCR()\<CR>" . "gv" . substitute(g:mc, '/', '?', 'g') . "``qz"
 
+" substitute for current selection
+xnoremap gs y:%s/<C-r>"//g<Left><Left>
 
 
 " -----------------------------------------------------------------------------
@@ -756,6 +845,8 @@ vnoremap <silent> # :<C-U>
 if executable('ag')
   let g:ackprg = 'ag --nogroup --nocolor --column'
 endif
+
+nnoremap <leader>ag "zyiw:Ag <C-r>z<CR>
 
 " -----------------------------------------------------------------------------
 "Work stuff clear case
@@ -819,7 +910,7 @@ vnoremap . :norm.<CR>
 
 " -----------------------------------------------------------------------------
 " Save temporary/backup files not in the local directory, but in your ~/.vim
-" directory, to keep them out of git repos. 
+" directory, to keep them out of git repos.
 " But first mkdir backup, swap, and undo first to make this work
 call system('mkdir ~/.vim')
 call system('mkdir ~/.vim/backup')
@@ -872,6 +963,8 @@ function! BuildCMakeProject(target, dir)
     endif
 endfunction
 
+nmap <leader>bt :!tmux send-keys -t "build" Up Enter<CR><CR>
+
 if isdirectory("build")
     nmap <leader>bb :call BuildCMakeProject("check", "build")<CR>
     nmap <leader>bu :call BuildCMakeProject("unit", "build")<CR>
@@ -879,8 +972,6 @@ if isdirectory("build")
     nmap <leader>br :call BuildCMakeProjectShort("run", "build")<CR>
     nmap <leader>bc :call BuildCMakeProjectShort("clean", "build")<CR>
     nmap <leader>bf :call BuildCMakeProjectShort("format", "build")<CR>
-    nmap <leader>bd :call BuildCMakeProjectShort("doc", "build")<CR>
-    nmap <leader>bp :call BuildCMakeProject("package", "build")<CR>
 endif
 
 if isdirectory("build2")
@@ -890,10 +981,8 @@ if isdirectory("build2")
     nmap <leader>b2r :call BuildCMakeProjectShort("run", "build2")<CR>
     nmap <leader>b2c :call BuildCMakeProjectShort("clean", "build2")<CR>
     nmap <leader>b2f :call BuildCMakeProjectShort("format", "build2")<CR>
-    nmap <leader>b2d :call BuildCMakeProjectShort("doc", "build2")<CR>
-    nmap <leader>b2p :call BuildCMakeProject("package", "build2")<CR>
 endif
-    
+
 if isdirectory("build3")
     nmap <leader>b3b :call BuildCMakeProject("check", "build3")<CR>
     nmap <leader>b3u :call BuildCMakeProject("unit", "build3")<CR>
@@ -901,8 +990,6 @@ if isdirectory("build3")
     nmap <leader>b3r :call BuildCMakeProjectShort("run", "build3")<CR>
     nmap <leader>b3c :call BuildCMakeProjectShort("clean", "build3")<CR>
     nmap <leader>b3f :call BuildCMakeProjectShort("format", "build3")<CR>
-    nmap <leader>b3d :call BuildCMakeProjectShort("doc", "build3")<CR>
-    nmap <leader>b3p :call BuildCMakeProject("package", "build3")<CR>
 endif
 
 
