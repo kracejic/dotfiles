@@ -1,19 +1,26 @@
 " this script is being ln -s to ~/.config/nvim/init.vim ~/.vimrc ~/.nvimrc
+" set nocompatible              " be iMproved, required
+" filetype off                  " required
 
-set nocompatible              " be iMproved, required
-filetype off                  " required
+if has('nvim')
+    if empty(glob('~/.config/nvim/autoload/plug.vim'))
+        silent !wget -P ~/.config/nvim/autoload/ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+        autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+    endif
+else
+    if empty(glob('~/.vim/autoload/plug.vim'))
+     silent !wget -P ~/.vim/autoload/ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+     autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+    endif
+endif
 
-" set the runtime path to include Vundle and initialize
-set rtp+=~/.vim/bundle/Vundle.vim
-call vundle#begin()
-" alternatively, pass a path where Vundle should install plugins
-"call vundle#begin('~/some/path/here')
+call plug#begin('~/.vim/bundle')
 
 " let Vundle manage Vundle, required
-Plugin 'VundleVim/Vundle.vim'
+Plug 'VundleVim/Vundle.vim'
 
 " Keep Plugin commands between vundle#begin/end.
-Plugin 'tpope/vim-fugitive'
+Plug 'tpope/vim-fugitive'
 
 " :GV - commit browser
 " :GV! only commits for current file
@@ -24,168 +31,197 @@ Plugin 'tpope/vim-fugitive'
 "  ]] and [[ to move between commits
 "  . to start command-line with :Git [CURSOR] SHA à la fugitive
 "  q to close
-Plugin 'junegunn/gv.vim'
+Plug 'junegunn/gv.vim'
 
-Plugin 'tpope/vim-surround'
+Plug 'tpope/vim-surround'
 
 
-Plugin 'tomtom/tcomment_vim'
+Plug 'tomtom/tcomment_vim'
 
-Plugin 'bling/vim-airline'
-Plugin 'vim-airline/vim-airline-themes'
+Plug 'bling/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
 
-Plugin 'airblade/vim-gitgutter'
+Plug 'airblade/vim-gitgutter'
 
-Plugin 'easymotion/vim-easymotion'
+Plug 'easymotion/vim-easymotion'
 
-Plugin 'terryma/vim-multiple-cursors'
+Plug 'terryma/vim-multiple-cursors'
 
-Plugin 'ctrlpvim/ctrlp.vim'
+Plug 'ctrlpvim/ctrlp.vim'
 
-Plugin 'jpo/vim-railscasts-theme'
+Plug 'jpo/vim-railscasts-theme'
 
-Plugin 'scrooloose/nerdTree'
+Plug 'scrooloose/nerdTree'
 
-Plugin 'vim-scripts/indentpython.vim'
+Plug 'vim-scripts/indentpython.vim'
 
-Plugin 'vim-scripts/argtextobj.vim'
+" aa ia - around argument, in argument
+Plug 'vim-scripts/argtextobj.vim'
+
+" Alt+c - modify color
+" Alt+r - insert new color RGB
+" Alt+2 - insert new color RGBA
+" :ColorPicker - color picker
+" origin: KabbAmine/vCoolor.vim
+Plug 'kracejic/vcoolor.vim'
 
 " new text objects
-Plugin 'kana/vim-textobj-user'
+Plug 'kana/vim-textobj-user'
 " f F text objects
-Plugin 'kana/vim-textobj-function'
+Plug 'kana/vim-textobj-function'
 " User defined operators/actions
-Plugin 'kana/vim-operator-user'
-Plugin 'michaeljsmith/vim-indent-object'
+Plug 'kana/vim-operator-user'
+Plug 'michaeljsmith/vim-indent-object'
 
 
-Plugin 'vimwiki/vimwiki'
+Plug 'vimwiki/vimwiki'
 
 " gs
-Plugin 'christoomey/vim-sort-motion'
+Plug 'christoomey/vim-sort-motion'
 
-Plugin 'tomasr/molokai'
+Plug 'tomasr/molokai'
 
-Plugin 'octol/vim-cpp-enhanced-highlight'
+Plug 'octol/vim-cpp-enhanced-highlight'
 
-Plugin 'godlygeek/tabular'
-Plugin 'plasticboy/vim-markdown' "better markdown support
+Plug 'pearofducks/ansible-vim'
+
+" :Tabularize
+Plug 'godlygeek/tabular'
+Plug 'plasticboy/vim-markdown' "better markdown support
 
 
 " better cooperation with tmux
-Plugin 'christoomey/vim-tmux-navigator'
+Plug 'christoomey/vim-tmux-navigator'
 
 " gutter for marks
-Plugin 'kshenoy/vim-signature'
+Plug 'kshenoy/vim-signature'
 
-" Vim plug for switching between companion source files (e.g. .h and .cpp)
-Plugin 'derekwyatt/vim-fswitch'
+" Vim Plug for switching between companion source files (e.g. .h and .cpp)
+Plug 'derekwyatt/vim-fswitch'
 
-Plugin 'rhysd/vim-clang-format'
-Plugin 'sbdchd/neoformat'
+Plug 'rhysd/vim-clang-format'
+Plug 'sbdchd/neoformat'
 
 " session management
-Plugin 'tpope/vim-obsession'
-Plugin 'dhruvasagar/vim-prosession'
-Plugin 'gikmx/ctrlp-obsession'
+Plug 'tpope/vim-obsession'
+Plug 'dhruvasagar/vim-prosession'
+Plug 'gikmx/ctrlp-obsession'
 
 " vim abolish does three things,
 " :Abolish {despa,sepe}rat{e,es,ed,ing,ely,ion,ions,or}  {despe,sepa}rat{}
 " :Subvert/blog{,s}/post{,s}/g
 " coercion - crs, crc change to snake case,
 "              change to camel case, cru upper case
-Plugin 'tpope/vim-abolish'
+Plug 'tpope/vim-abolish'
 
 " Snippets
-Plugin 'SirVer/ultisnips'
-Plugin 'honza/vim-snippets'
-Plugin 'kracejic/snippetinabox.vim'
+Plug 'SirVer/ultisnips'
+Plug 'honza/vim-snippets'
+Plug 'kracejic/snippetinabox.vim'
 
-Plugin 'scrooloose/syntastic'
+Plug 'scrooloose/syntastic'
 
-Plugin 'majutsushi/tagbar'
+Plug 'majutsushi/tagbar'
 
-Plugin 'joereynolds/gtags-scope'
+Plug 'joereynolds/gtags-scope'
+
+" nice search in files
+Plug 'dyng/ctrlsf.vim'
+" :FS [pattern]
+
 
 " search with :Ack [options] {pattern] [{directories}]
-Plugin 'mileszs/ack.vim'
+Plug 'mileszs/ack.vim'
 
 " :Dox command generates stub for doxygen doc in C++, etc
-Plugin 'vim-scripts/DoxygenToolkit.vim'
+Plug 'vim-scripts/DoxygenToolkit.vim'
 
 " :Search :SearchBuffers :SearchReset :SearchBuffersReset
-Plugin 'vim-scripts/MultipleSearch'
+" <Leader>*
+Plug 'vim-scripts/MultipleSearch'
 
 " fast searching
-Plugin 'junegunn/fzf'
-Plugin 'junegunn/fzf.vim'
+" Plug 'junegunn/fzf'
+Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+Plug 'junegunn/fzf.vim'
 
 " ga / gaip= align in paragraph around char =
-Plugin 'junegunn/vim-easy-align'
+Plug 'junegunn/vim-easy-align'
 
 " :ColorToggle
-Plugin 'lilydjwg/colorizer'
+Plug 'lilydjwg/colorizer'
 
 " Syntaxes for a lot of languages
-Plugin 'sheerun/vim-polyglot'
+Plug 'sheerun/vim-polyglot'
 
 " :DevDocs ---
-Plugin 'rhysd/devdocs.vim'
+Plug 'rhysd/devdocs.vim'
 
-Plugin 'vim-scripts/visual-increment'
+Plug 'vim-scripts/visual-increment'
 
 " :Delete, :Unlink, :Move, :Rename, :Chmod, :Mkdir, :Find, :Locate, :SudoWrite, :SudoEdit
-Plugin 'tpope/vim-eunuch'
+Plug 'tpope/vim-eunuch'
 
-" Plugin 'artur-shaik/vim-javacomplete2'
+"Run interactive:
+":DB sqlite:myfile.sqlite3
+"
+"Run commands
+":DB sqlite:myfile.sqlite3 select count(*) from widgets
+":DB redis:/// CLIENT LIST
+"
+"Save DBs locations
+":DB g:prod = postgres://user:pass@db.example.com/production_database
+":DB g:prod drop table users
+"
+"Give a range to run part or all of the current buffer as a query.
+":%DB mysql://root@localhost/bazquux
+Plug 'tpope/vim-db'
+
+Plug 'Yggdroot/indentLine'
+
+Plug 'skywind3000/asyncrun.vim'
+
+" New autocomplete
+" Async support
+Plug 'prabirshrestha/async.vim'
+" Async autocompletion for Vim 8 and Neovim with |timers|.
+Plug 'prabirshrestha/asyncomplete.vim'
+Plug 'prabirshrestha/asyncomplete-file.vim'
+" Provide Language Server Protocol autocompletion source for asyncomplete.vim and vim-lsp.
+Plug 'prabirshrestha/asyncomplete-lsp.vim'
+" Async Language Server Protocol plugin for vim8 and neovim.
+Plug 'prabirshrestha/vim-lsp'
+" Add suport for languages
+Plug 'mattn/vim-lsp-settings'
+" Support snippets
+" Plug 'thomasfaingnaert/vim-lsp-snippets'
+" Plug 'thomasfaingnaert/vim-lsp-ultisnips'
+
+
+" Plug 'artur-shaik/vim-javacomplete2'
 
 
 let g:colorizer_startup = 0
 
-if hostname() =~ "build01"
-    Plugin 'vim-scripts/ccase.vim'
-    Plugin 'Valloric/YouCompleteMe'
-    Plugin 'vim-scripts/ShowFunc.vim'
-endif
 
-if hostname() =~ "ankh"
-    Plugin 'Valloric/YouCompleteMe'
-    Plugin 'tbabej/taskwiki'
-endif
-if hostname() =~ "efebe"
-    Plugin 'Valloric/YouCompleteMe'
-    " Plugin 'tbabej/taskwiki'
-endif
-if hostname() =~ "krull"
-    Plugin 'Valloric/YouCompleteMe'
-    Plugin 'tbabej/taskwiki'
-endif
-if hostname() =~ "tezuman"
-    Plugin 'Valloric/YouCompleteMe'
-endif
-if hostname() =~ "chirm"
-    " Plugin 'MrAshLinux/vim-perforce'
-    Plugin 'Valloric/YouCompleteMe'
-    Plugin 'tbabej/taskwiki'
-endif
-
-Plugin 'kracejic/themeinabox.vim'
+Plug 'kracejic/themeinabox.vim'
 
 " Bin
-" Plugin 'itchyny/calendar.vim'
-" Plugin 'Yggdroot/indentLine'
+" Plug 'itchyny/calendar.vim'
+" Plug 'Yggdroot/indentLine'
 
 
 
 
 " All of your Plugins must be added before the following line
-call vundle#end()            " required
+call plug#end()
+
 
 " Use of the filetype plugins, auto completion and indentation support
-filetype plugin indent on    " required
+" filetype plugin indent on    " required
 
 " To ignore plugin indent changes, instead use:
-filetype plugin on
+" filetype plugin on
 "
 " Brief help
 " :PluginList       - lists configured plugins
@@ -202,9 +238,12 @@ filetype plugin on
 
 
 "General
-set number  "Show line numbers
-set relativenumber
+" set number  "Show line numbers
+" set relativenumber
+set nonu
+set nornu
 nmap <leader>num :set nu! <CR>:set rnu!<CR>
+nmap <leader>gnum :set g:nu! <CR>:set g:rnu!<CR>
 set wrap  "enable wraping
 set linebreak   "Break lines at word (requires Wrap lines)
 set nolist         " list disables linebreak
@@ -254,6 +293,13 @@ set mouse=v             " use mouse in visual mode (not normal,insert,command,he
 set t_ut=
 set previewheight=7
 
+set fillchars+=vert:│         " nicer vert split separator
+set fillchars+=stlnc:-        " nicer separator for horizontal split
+
+if has('gui_running')
+  set guifont=Iosevka\ Term\ 12
+endif
+
 "display whitespace
 set listchars=tab:>-,trail:~,extends:>,precedes:<
 "set listchars=eol: ,tab:>-,trail:~,extends:>,precedes:<
@@ -292,7 +338,10 @@ else
     " [Commands] --expect expression for directly executing the command
     let g:fzf_commands_expect = 'alt-enter,ctrl-x'
 
-    command! GGFiles call fzf#run(fzf#wrap({'source': 'if [ -d .git ] ; then git ls-files -co --exclude-standard ; elif [ -d .hg ] ; then hg locate ; else  find . ; fi', 'sink': 'e'}))
+    " command! GGFiles call fzf#run(fzf#wrap({'source': 'if [ -d .git ] ; then git ls-files -co --exclude-standard ; elif [ -d .hg ] ; then hg locate ; else  find . ; fi', 'sink': 'e'}))
+    command! GGFiles call fzf#run(fzf#wrap({'source': 'if git rev-parse --git-dir > /dev/null ; then git ls-files -co --exclude-standard ; elif [ -d .hg ] ; then hg locate ; else  find . ; fi', 'sink': 'e'}))
+    " command! GGFiles call fzf#run(fzf#wrap({'source': 'git ls-files -co --exclude-standard', 'sink': 'e'}))
+    " command! GGFiles call fzf#run(fzf#wrap({'source': 'git ls-files -co --exclude-standard', 'sink': 'e'}))
 
     nnoremap <C-p> :GGFiles<cr>
     " nnoremap <C-p> :CtrlP<cr>
@@ -358,7 +407,6 @@ noremap + <c-a>
 noremap - <c-x>
 
 
-
 " Splits
 set splitbelow    " more natural split opening
 set splitright    " more natural split opening
@@ -417,35 +465,39 @@ command! WToc :VimwikiTOC
 command! WTags :VimwikiRebuildTags
 
 
-if hostname() == "MD1KQAXC"
-    let g:vimwiki_list = [{'path': '/d/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '/d/cloud/space/siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
-elseif hostname() =~ "chirm"
-    let g:vimwiki_list = [{'path': '~/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '~/cloud/space/siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
-elseif hostname() =~ "ankh"
-    let g:vimwiki_list = [{'path': '~/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}, {'path': '~/cloud/space/siemens/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
-else
-    let g:vimwiki_list = [{'path': '~/cloud/space/source/', 'syntax': 'markdown', 'ext': '.mdw', 'auto_tags': 1}]
-endif
-au BufNewFile,BufRead *.mdw set nowrap
 
 
-
-" z= choose spell          ]s [s move 
+" z= choose spell          ]s [s move
 " zg add to spellfile      zw add as bad,           zug/zuw remove from spellfile
 set spellfile=~/.vim/spell.misc.utf-8.add
 command! Spellen :setlocal spell spelllang=en_us
 command! Spellcs :setlocal spell spelllang=cs
 command! Spellnone :setlocal nospell
+command! ColorPicker :VCoolor
+
 
 let g:calendar_google_calendar = 1
 
 
 
+" quickfix open
+:nmap gqf :copen 20<CR>
+command Quickfix :copen 20<CR>
+command QF :copen 20<CR>
+command Qf :copen 20<CR>
+command QFF :cclose 20<CR>
+command Qff :cclose 20<CR>
 " quickfix next, prev
 :nmap [q :cprev<CR>
 :nmap ]q :cnext<CR>
 :nmap [Q :cfirst<CR>
 :nmap ]Q :clast<CR>
+
+" location list next, prev
+:nmap [e :lprev<CR>
+:nmap ]e :lnext<CR>
+:nmap [E :lfirst<CR>
+:nmap ]E :llast<CR>
 
 " Theme stuff
 "let base16colorspace=256  " Access colors present in 256 colorspace
@@ -455,6 +507,7 @@ nnoremap <leader>2 :colorscheme molokai<cr>:AirlineTheme base16_monokai<cr>
 nnoremap <leader>3 :colorscheme themeinabox<cr>:AirlineTheme base16_eighties<cr>
 nnoremap <leader>4 :colorscheme themeinabox-light<cr>:AirlineTheme sol<cr>
 nnoremap <leader>5 :colorscheme themeinabox-transparent<cr>:AirlineTheme base16_eighties<cr>
+nnoremap <leader>6 :colorscheme themeinabox-blue<cr>:AirlineTheme base16_grayscale<cr>
 
 " get current syntax class
 nmap <leader>sy :echo "hi<" . synIDattr(synID(line("."),col("."),1),"name") . '> trans<'
@@ -480,7 +533,7 @@ nmap <leader>dd :s/\(^.*$\)/\1\r\1/<CR>:noh<CR>
 xmap <leader>dd :'<,'>s/\(.*\)/\1\r\1/<CR>:noh<CR>
 
 " New line in normal mode
-nnoremap <CR> :<c-u>put =repeat(nr2char(10), v:count1)<cr>
+" nnoremap <CR> :<c-u>put =repeat(nr2char(10), v:count1)<cr>
 
 " json indent
 command! -range -nargs=0 -bar IndentJson <line1>,<line2>!python -m json.tool
@@ -513,10 +566,27 @@ augroup ClangFormatSettings
 
     autocmd FileType vimwiki nmap <leader>tts :TaskWikiMod +sprint<CR>
     autocmd FileType vimwiki nmap <leader>ttS :TaskWikiMod -sprint<CR>
+
+    " autocmd FileType markdown set cole=0
+    " au BufNewFile,BufRead *.mdw set nowrap
+    " au BufNewFile,BufRead,BufAdd *.md set cole=0
 augroup END
+
+let g:indentLine_char = '¦'
+" let g:indentLine_setConceal = 0
+" let g:indentLine_enabled = 0
+" let g:indentLine_concealcursor = 'inc'
+" let g:indentLine_conceallevel = 0
+" let g:indentLine_fileTypeExclude = ['markdown']
+let g:indentLine_fileType = ["yaml","yml","json"]
 
 " Neoformat
 let g:neoformat_enabled_python = ['autopep8']
+let g:neoformat_java_clang = {
+        \ 'exe': 'clang-format',
+        \ 'stdin': 1,
+        \ }
+let g:neoformat_enabled_java = ['clang']
 
 nnoremap <Leader>cf :Neoformat<CR>
 vnoremap <Leader>cf :Neoformat<CR>
@@ -543,8 +613,6 @@ let g:tagbar_type_markdown = {
 \ }
 
 
-" autocmd FileType java setlocal omnifunc=javacomplete#Complete
-
 augroup filetypedetect
     au BufRead,BufNewFile *.log set filetype=log
     au BufReadPost,BufNewFile *.compositor set ft=compositor
@@ -555,12 +623,14 @@ augroup filetypedetect
     au BufReadPost,BufNewFile config.in set ft=kconfig
     au BufReadPost,BufNewFile *.xml set tabstop=4
     au BufReadPost,BufNewFile *.crt set ft=crt
+    au BufReadPost,BufNewFile *.gsh set ft=Jenkinsfile
 augroup END
 
 
 let g:syntastic_cpp_compiler_options = "-std=c++14"
+let g:syntastic_java_checkers = []
 " add constant
-nmap <leader>acr /[,)]<CR>:nohlsearch<CR>Bhi&<ESC>?[,(]<CR>:nohlsearch<CR>wiconst <ESC>
+nmap <leader>cre /[,)]<CR>:nohlsearch<CR>Bhi&<ESC>?[,(]<CR>:nohlsearch<CR>wiconst <ESC>
 
 noremap <leader>cr :pyf ~/bin/clang-rename.py<cr>
 
@@ -619,10 +689,6 @@ command! Diffstop :diffoff!
 set undolevels=1000 "Number of undo levels
 set backspace=indent,eol,start  "Backspace behaviour
 
-if v:version > 703 || v:version == 703 && has("patch541")
-      set formatoptions+=j " Delete comment character when joining commented lines
-endif
-
 " check file change every 4 seconds ('CursorHold') and reload the buffer upon
 " detecting change
 set autoread
@@ -630,6 +696,7 @@ au CursorHold * checktime
 
 set tabpagemax=50 " max number of pages
 
+" colorscheme themeinabox
 colorscheme themeinabox
 let g:airline_theme='base16_eighties'
 
@@ -643,30 +710,89 @@ command! Wroot :execute ':silent w !sudo tee % > /dev/null' | :edit!
 command! W :w
 
 
-"   YCM
+"   YCMd
 " http://stackoverflow.com/questions/3105307/how-do-you-automatically-remove-the-preview-window-after-autocompletion-in-vim
 " :h ins-completion.
 " :YcmDiags - errors
-let g:ycm_confirm_extra_conf = 0
-let g:ycm_global_ycm_extra_conf = '~/bin/rc/.ycm_extra_conf.py'
-let g:ycm_error_symbol = '%'
-let g:ycm_warning_symbol = '%'
-nnoremap <leader>yj :YcmCompleter GoToDefinitionElseDeclaration<CR>
-nnoremap <leader>yg :YcmCompleter GoTo<CR>
-nnoremap <leader>yi :YcmCompleter GoToImplementationElseDeclaration<CR>
-nnoremap <leader>yt :YcmCompleter GetTypeImprecise<CR>
-nnoremap <leader>yd :YcmCompleter GetDoc<CR>
-nnoremap <leader>yf :YcmCompleter FixIt<CR>
-nnoremap <leader>yr :YcmCompleter GoToReferences<CR>
-nnoremap <leader>ys :YcmDiags<CR>
-nnoremap <leader>yD ::YcmForceCompileAndDiagnostics<CR>
-nnoremap <leader>yR :YcmRestartServer<CR>
-nnoremap <F12> :YcmCompleter GoToDefinitionElseDeclaration<CR>
-nnoremap <F10> :YcmCompleter GetTypeImprecise<CR>
-nnoremap <F9> :YcmCompleter GetDocImprecise<CR>
-"nnoremap <F5> :YcmForceCompileAndDiagnostics<CR>
+" let g:ycm_confirm_extra_conf = 0
+" let g:ycm_global_ycm_extra_conf = '~/bin/rc/.ycm_extra_conf.py'
+" let g:ycm_error_symbol = '%'
+" let g:ycm_warning_symbol = '%'
+" let g:ycm_always_populate_location_list = 1
+" let g:ycm_max_diagnostics_to_display = 300
+" nnoremap <leader>yj :YcmCompleter GoToDefinitionElseDeclaration<CR>
+" nnoremap <leader>yg :YcmCompleter GoTo<CR>
+" nnoremap <leader>yi :YcmCompleter GoToImplementationElseDeclaration<CR>
+" nnoremap <leader>yt :YcmCompleter GetTypeImprecise<CR>
+" nnoremap <leader>yd :YcmCompleter GetDoc<CR>
+" nnoremap <leader>yf :YcmCompleter FixIt<CR>
+" nnoremap <leader>yr :YcmCompleter GoToReferences<CR>
+" nnoremap <leader>ys :YcmDiags<CR>
+" nnoremap <leader>yD ::YcmForceCompileAndDiagnostics<CR>
+" nnoremap <leader>yR :YcmRestartServer<CR>
+" nnoremap <F12> :YcmCompleter GoToDefinitionElseDeclaration<CR>
+" nnoremap <F10> :YcmCompleter GetTypeImprecise<CR>
+" nnoremap <F9> :YcmCompleter GetDocImprecise<CR>
+" "nnoremap <F5> :YcmForceCompileAndDiagnostics<CR>
 
 
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsJumpForwardTrigger="<tab>"
+let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+" set completeopt+=menuone
+
+inoremap <expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
+inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+inoremap <expr> <cr>    pumvisible() ? "\<C-y>" : "\<cr>"
+imap <c-space> <Plug>(asyncomplete_force_refresh)
+
+" Disable diagnostics
+" let g:lsp_diagnostics_enabled = 0
+let g:lsp_signs_error = {'text': '✗'}
+let g:lsp_signs_warning = {'text': '%'}
+" Disable highligh errors
+let g:lsp_highlights_enabled = 0
+let g:lsp_textprop_enabled = 0
+let g:lsp_signs_priority = 11
+
+function! s:on_lsp_buffer_enabled() abort
+    setlocal omnifunc=lsp#complete
+    setlocal signcolumn=yes
+    " refer to doc to add more commands
+endfunction
+
+nmap <F12> <plug>(lsp-declaration)
+nmap gd <plug>(lsp-declaration)
+nmap gD <plug>(lsp-definition)
+nmap gp <plug>(lsp-peek-declaration)
+nmap gP <plug>(lsp-peek-definition)
+nmap ge <plug>(lsp-next-diagnostic)
+nmap gh <plug>(lsp-hover)
+nmap gr <plug>(lsp-references)
+nmap gu <plug>(lsp-references)
+nmap gE <plug>(lsp-document-diagnostics)
+nmap ga <plug>(lsp-code-action)
+nmap <leader>ya <plug>(lsp-code-action)
+nmap <leader>yj <plug>(lsp-declaration)
+nmap <leader>yg <plug>(lsp-declaration)
+nmap <leader>yd <plug>(lsp-peek-declaration)
+nmap <leader>ys <plug>(lsp-status)
+
+augroup lsp_install
+    au!
+    " call s:on_lsp_buffer_enabled only for languages that has the server registered.
+    autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+
+au User asyncomplete_setup call asyncomplete#register_source(asyncomplete#sources#file#get_source_options({
+    \ 'name': 'file',
+    \ 'whitelist': ['*'],
+    \ 'priority': 10,
+    \ 'completor': function('asyncomplete#sources#file#completor')
+    \ }))
+
+
+set showtabline:0
 " airline
 let g:airline_mode_map = {
   \ '__' : '-',
@@ -681,6 +807,7 @@ let g:airline_mode_map = {
   \ 'S'  : 'S',
   \ '' : 'S',
   \ }
+
 let g:airline#extensions#default#section_truncate_width = {
   \ 'b': 79,
   \ 'x': 60,
@@ -704,20 +831,32 @@ elseif hostname() =~ "chirm"
 else
     let g:airline_powerline_fonts = 1
 endif
-let g:airline#extensions#tabline#enabled = 1
+let g:airline#extensions#tabline#enabled = 0
 "let g:airline#extensions#tabline#left_sep = ' '
-"let g:airline#extensions#tabline#left_alt_sep = '|'
+" let g:airline#extensions#tabline#left_alt_sep = '|'
+" autocmd VimEnter * set showtabline=0
+" autocmd VimEnter * AirlineToggle
+
+nmap <F5>          <Plug>XTablineToggleTabs
+nmap <leader><F5>  <Plug>XTablineToggleFiltering
 
 " tabline
-command! TablineON :set showtabline=1
-command! TablineOFF :set showtabline=0
+" command! TablineON :let g:airline#extensions#tabline#enabled=1
+" command! TablineOFF :let g:airline#extensions#tabline#enabled=0
+" tabline
+" command! TablineON :set showtabline=1
+" command! TablineOFF :set showtabline=0
 
+" statusline
+command! StatuslineON :set laststatus=2
+command! StatuslineOFF :set laststatus=1
 
 " multicursor
 let g:multi_cursor_next_key='<C-n>'
 let g:multi_cursor_prev_key='<C-p>'
 let g:multi_cursor_skip_key='<C-x>'
 let g:multi_cursor_quit_key='<Esc>'
+let g:multi_cursor_exit_from_insert_mode=0
 
 
 " easymotion
@@ -847,6 +986,15 @@ if executable('ag')
 endif
 
 nnoremap <leader>ag "zyiw:Ag <C-r>z<CR>
+nnoremap <leader>ack "zyiw:Ack <C-r>z<CR>
+
+" -----------------------------------------------------------------------------
+"  CtrlSF
+let g:ctrlsf_regex_pattern = 1
+let g:ctrlsf_default_root = 'cwd'
+cnoreabbrev FS CtrlSF
+cnoreabbrev Fs CtrlSF
+nnoremap <leader>fs :CtrlSF<CR>
 
 " -----------------------------------------------------------------------------
 "Work stuff clear case
@@ -879,7 +1027,6 @@ function! g:UltiSnips_Reverse()
 
   return ""
 endfunction
-
 
 if !exists("g:UltiSnipsJumpForwardTrigger")
   let g:UltiSnipsJumpForwardTrigger = "<tab>"
@@ -928,6 +1075,17 @@ if has('persistent_undo')
 endif
 
 " -----------------------------------------------------------------------------
+" http://vim.wikia.com/wiki/Sum_numbers
+" :let g:S=0
+" :%s/\d\+/\=Sum(submatch(0))/
+" :echo g:S
+let g:S = 0  "result in global variable S
+function! Sum(number)
+  let g:S = g:S + a:number
+  return a:number
+endfunction
+
+" -----------------------------------------------------------------------------
 " CMake support
 function! BuildCMakeProjectShort(target, dir)
     echom a:target
@@ -941,56 +1099,50 @@ endfunction
 
 function! BuildCMakeProject(target, dir)
     echom a:target
-    if isdirectory(a:dir)
-        let result = system( "cd " . a:dir . " && clear && cmake --build . --target " . a:target . " -- -j" . (system('grep -c ^processor /proc/cpuinfo')+1) . " 2>&1 && echo '-- Build was OK'")
+    let currentWinNr = winnr()
+    " let wnr = bufwinnr('__Build_output__')
 
-        split __Build_output__
-        normal! ggdG
-        setlocal filetype=krcppbuild
-        setlocal buftype=nofile
-        setlocal bufhidden=hide
-        setlocal nobuflisted
+    copen 25
 
-        " Insert the bytecode.
-        call append(0, split(result, '\v\n'))
-        setlocal nonumber
-        setlocal norelativenumber
-        " setlocal nomodifiable
+    setlocal filetype=krcppbuild
+    " Insert the bytecode.
+    setlocal nonumber
+    setlocal norelativenumber
+    setlocal conceallevel=3
+    :map <buffer> q :bd<cr>
+    " setlocal nomodifiable
 
-        :map <buffer> q :bd<cr>
-    else
-        echo "build folder was not found, cannot build"
-    endif
+    execute 'AsyncRun bb '. a:target
+
+    " go back
+    exe l:currentWinNr  . "wincmd w"
+
 endfunction
 
 nmap <leader>bt :!tmux send-keys -t "build" Up Enter<CR><CR>
 
 if isdirectory("build")
-    nmap <leader>bb :call BuildCMakeProject("check", "build")<CR>
-    nmap <leader>bu :call BuildCMakeProject("unit", "build")<CR>
+    nmap <leader>bb :call BuildCMakeProject("unit", "build")<CR>
+    nmap <leader>bu :call BuildCMakeProject("check", "build")<CR>
     nmap <leader>bB :call BuildCMakeProject("all", "build")<CR>
     nmap <leader>br :call BuildCMakeProjectShort("run", "build")<CR>
-    nmap <leader>bc :call BuildCMakeProjectShort("clean", "build")<CR>
-    nmap <leader>bf :call BuildCMakeProjectShort("format", "build")<CR>
+    nmap <leader>bc :call BuildCMakeProject("clean", "build")<CR>
+    nmap <leader>bf :call BuildCMakeProject("format", "build")<CR>
 endif
 
-if isdirectory("build2")
-    nmap <leader>b2b :call BuildCMakeProject("check", "build2")<CR>
-    nmap <leader>b2u :call BuildCMakeProject("unit", "build2")<CR>
-    nmap <leader>b2B :call BuildCMakeProject("all", "build2")<CR>
-    nmap <leader>b2r :call BuildCMakeProjectShort("run", "build2")<CR>
-    nmap <leader>b2c :call BuildCMakeProjectShort("clean", "build2")<CR>
-    nmap <leader>b2f :call BuildCMakeProjectShort("format", "build2")<CR>
-endif
-
-if isdirectory("build3")
-    nmap <leader>b3b :call BuildCMakeProject("check", "build3")<CR>
-    nmap <leader>b3u :call BuildCMakeProject("unit", "build3")<CR>
-    nmap <leader>b3B :call BuildCMakeProject("all", "build3")<CR>
-    nmap <leader>b3r :call BuildCMakeProjectShort("run", "build3")<CR>
-    nmap <leader>b3c :call BuildCMakeProjectShort("clean", "build3")<CR>
-    nmap <leader>b3f :call BuildCMakeProjectShort("format", "build3")<CR>
-endif
 
 
 " -----------------------------------------------------------------------------
+" error message formats - see :help errorformat
+let &efm = '\.\.\/%f:%l: FAILED:' . ','
+let &efm .= '%f:%l: FAILED:' . ','
+let &efm .= '\.\.\/%f:%l:%c: error: %m' . ','
+let &efm .= '%f:%l:%c: error: %m' . ','
+let &efm .= '\.\.\/%f:%l:%c: warning: %m' . ','
+let &efm .= '%f:%l:%c: warning: %m' . ','
+let &efm .= '\.\.\/%f:%l: error: %m' . ','
+let &efm .= '%f:%l: error: %m' . ','
+let &efm .= '\.\.\/%f:%l: warning: %m' . ','
+let &efm .= '%f:%l: warning: %m' . ','
+
+

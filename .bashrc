@@ -37,7 +37,10 @@ pathadd "/home/${USER}/bin/"
 #Other
 #=====
 # Orange
-# PS1='\[\e[1;35m\]\u@\h\[\e[m\] \[\e[1;34m\]\w \[\e[1;37m\]'
+PS1='\[\e[1;35m\]\u@\h\[\e[m\] \[\e[1;34m\]\w \[\e[1;37m\]'
+if test -n "$ZSH_VERSION"; then
+    PS1='%F{35}%n@%m%f %F{12}%(8~|.../%7~|%~)%f '
+fi
 
 # Purple
 # PS1="\[\033[38;5;215m\]\u@\h \[$(tput sgr0)\]\[\033[38;5;12m\]\w \[$(tput sgr0)\]"
@@ -48,27 +51,32 @@ if ! pgrep -u "$USER" -f -x "^ssh-agent$" > /dev/null; then
     ssh-agent > ~/.ssh-agent-thing
     eval "$(<~/.ssh-agent-thing)" /dev/null
 fi
-# if [[ "$SSH_AGENT_PID" == "" ]]; then
 if [ -f ~/.ssh-agent-thing ]; then
     eval "$(<~/.ssh-agent-thing)" > /dev/null
 fi
 
-alias ls="ls --color"
-alias l="ls -alh"
-alias ll="ls -alh"
-alias lls="ls -lh --color"
+export GOPATH=~/go ; export PATH=$PATH:$GOBIN ; export GOBIN=$GOPATH/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+
+alias ls="ls --color --group-directories-first"
+alias l="ls -alh --group-directories-first"
+alias ll="ls -lh --group-directories-first"
+alias lls="ls -lh --color --group-directories-first"
 alias cd..="cd .."
-alias lsf="ls -al | grep -i"
+alias lsf="ls -al --group-directories-first | grep -i"
 alias psf="ps aux -A | grep -i"
 alias psmem="ps aux --sort -rss"
 alias grepp="grep -Rnsi"
 alias c="clear"
+alias ip="ip -color=always"
+alias ips="ip -color=always -br a"
 
 alias g="git"
 
 alias makep="prettyfier make"
 alias cmakep="prettyfier cmake"
 alias ninjap="prettyfier ninja"
+alias go="prettyfier go"
 
 # easy find
 findfunction() {
@@ -79,13 +87,13 @@ alias findbig="find ./ -type f -print0 | xargs -0 du | sort -n | tail -n 100 | c
 alias findbigdir="find ./ -maxdepth 1 -type d -print0 | xargs -0 du --max-depth=1 | sort -n | tail -n 50 | tail -n +1 | cut -f2 | xargs -I{} du -sh {}"
 
 alias sc="sudo systemctl"
-alias scg="systemctl | grep "
+alias scg="systemctl | grep -i "
 alias sj="sudo journalctl"
-alias sl="sudo journalctl"
+alias sl="sudo journalctl -e"
 alias sjf="sudo journalctl -f"
 alias slf="sudo journalctl -f"
-alias sju="sudo journalctl -u"
-alias slu="sudo journalctl -u"
+alias sju="sudo journalctl -e -u"
+alias slu="sudo journalctl -e -u"
 alias sjuf="sudo journalctl -f -u"
 alias sluf="sudo journalctl -f -u"
 alias sjfu="sudo journalctl -f -u"
@@ -112,24 +120,25 @@ if [ -e /etc/pacman.conf ] ; then
     alias ainstall="sudo pacman --color always -S"
     alias areinstall="sudo pacman --color always -S"
     alias aremove="sudo pacman --color always -R"
-    alias asearch="pacsearch"
+    alias asearch="pacman --color always -Ss"
     alias ashow="pacman --color always -Si"
     alias ashowfiles="pacman --color always -Qlq"
     alias ashowlocal="pacman --color always -Qi"
     alias alistall="pacman --color always -Q"
     alias alistallexplicit="pacman --color always -Qqe"
     alias update="sudo pacman --color always -Qu"
-    alias upgrade="sudo pacman --color always -Syyu"
+    alias upgrade="sudo pacman --color always -Syu"
+    alias upgradeforce="sudo pacman --color always -Syyu"
 fi
 if [ -d /etc/apt ] ; then
-    alias ainstall="sudo apt-get install"
-    alias areinstall="sudo apt-get install --reinstall"
+    alias ainstall="sudo apt install"
+    alias areinstall="sudo apt install --reinstall"
     alias aremove="sudo apt-get --purge remove"
-    alias asearch="sudo apt-cache search"
-    alias ashow="sudo apt-cache show"
-    alias alistall="sudo apt --installed list"
-    alias update="sudo apt-get update"
-    alias upgrade="sudo apt-get upgrade"
+    alias asearch="apt search"
+    alias ashow="apt show"
+    alias alistall="apt --installed list"
+    alias update="sudo apt update"
+    alias upgrade="sudo apt upgrade"
     alias uu="update && upgrade"
 fi
 if [ -d /mingw32 ] ; then
@@ -146,28 +155,12 @@ if [ -d /mingw32 ] ; then
     alias upgrade="pacman -Syyu"
 fi
 
-# supervisord shortucts
-alias sreread="sudo supervisorctl reread"
-alias supdate="sudo supervisorctl update"
-alias sstatus="sudo supervisorctl status"
-alias sstart="sudo supervisorctl start"
-alias sstop="sudo supervisorctl stop"
-alias srestart="sudo supervisorctl restart"
-alias stail="sudo supervisorctl tail"
-alias staill="sudo supervisorctl tail -8000"
-alias stailf="sudo supervisorctl tail -f"
-alias sgogo="sudo supervisorctl reread && sudo supervisorctl update && echo --wait-- && sleep 3 && sudo supervisorctl status"
 
 # git shortcuts
 alias gf="git fetch"
 alias gfa="git fetch --all"
 alias gs="git s"
 alias gg="git g"
-alias gb="git branch"
-alias gd="git dd"
-alias gm="git merge"
-alias gc="git commit"
-alias gu="git u"
 alias git-nossl="git -c http.sslVerify=false"
 # alias git-amend-now='GIT_COMMITTER_DATE="LC_ALL=en_US.utf8 date -R" git commit --amend --date "LC_ALL=en_US.utf8 date -R"'
 alias git-amend-now='export YESTERDAYEVENING=$(LC_ALL=en_US.utf8 date -R) export GIT_COMMITTER_DATE="$YESTERDAYEVENING" ; git commit --date "$YESTERDAYEVENING" --amend ; export GIT_COMMITTER_DATE=""'
@@ -240,6 +233,8 @@ alias pscpu10='ps auxf | sort -nr -k 3 | head -10'
 ## Get server cpu info ##
 alias cpuinfo='lscpu'
 
+alias vimlog='sed -r "s/\x1B\[([0-9];)?([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g" | vim -R -c "set filetype=log nowrap" -'
+
 weather() {
 curl -s wttr.in/$1
 }
@@ -267,6 +262,8 @@ fi
 # http://www.catonmat.net/blog/bash-vi-editing-mode-cheat-sheet/
 set -o vi
 
+# set color TERM
+test $TERM = xterm && TERM=xterm-256color
 
 # bind home and end to ESC+insert on ^ and $
 # http://stackoverflow.com/questions/4200800/in-bash-how-do-i-bind-a-function-key-to-a-command
@@ -291,6 +288,9 @@ fsdevice () {
     MACHINE="NONE"
     MOUNT_POINT="$HOME/device"
     PORT=22
+    if [ $# -lt 1 ]; then
+        echo "fsdevice -u user -m ./mountpoint -p port machine"
+    fi
     # shift
     while [[ $# -gt 0 ]] ; do
         key="$1"
@@ -317,13 +317,22 @@ fsdevice () {
     if [ $MACHINE = "NONE" ] ; then echo "missing target machine" ; return 1 ; fi
     mkdir -p $MOUNT_POINT 2>/dev/null
     # echo ARGS: $MACHINE , $MOUNT_POINT , $SCRIPT_USER , $PORT
-    sudo fusermount -zu $MOUNT_POINT
-    sudo sshfs ${SCRIPT_USER}@${MACHINE}:/ -p $PORT $MOUNT_POINT -C -o allow_other
-    echo "Mounted ${SCRIPT_USER}@${MACHINE}:/ at $MOUNT_POINT"
+    fusermount -zu $MOUNT_POINT
+    # sudo -E sshfs ${SCRIPT_USER}@${MACHINE}:/ -p $PORT $MOUNT_POINT -C -o allow_other \
+    sshfs ${MACHINE}:/  $MOUNT_POINT -C -o allow_other \
+    && echo "Mounted ${SCRIPT_USER}@${MACHINE}:/ at $MOUNT_POINT"
 }
 
 fsroot () {
   fsdevice -u root $*
+}
+
+tmuxf () {
+    cd ~/.tmux/resurrect
+    rm last
+    ln -s `ls | tail -n1` last
+    cd -
+    tmux
 }
 
 #------------------------------------------------------------------------------
@@ -335,15 +344,18 @@ if hash nvim 2>/dev/null; then
     # fix Ctrl+H for neovim + tmux
     infocmp $TERM | sed 's/kbs=^[hH]/kbs=\\177/' > ~/$TERM.ti ; tic ~/$TERM.ti
     alias vim="nvim"
+    alias suvim="sudo -E nvim"
 elif hash vim 2>/dev/null; then
     export EDITOR=vim
     export SUDO_EDITOR=vim
     export GIT_EDITOR=vim
+    alias suvim="sudo -E vim"
 else
     export EDITOR=vi
     export SUDO_EDITOR=vi
     export GIT_EDITOR=vi
     alias vim="vi"
+    alias suvim="sudo -E vi"
 fi
 
 #------------------------------------------------------------------------------
@@ -368,9 +380,7 @@ cf() {
   if [[ -n $file ]]
   then
      if [[ -d $file ]]
-     then
-        cd -- $file
-     else
+     then cd -- $file else
         cd -- ${file:h}
      fi
   fi
@@ -390,6 +400,7 @@ fo() {
       [ "$key" = ctrl-o ] && open "$file" || [ "$key" = ctrl-e ] && ${EDITOR:-vim} "$file" || cd -- $(dirname "$file")
   fi
 }
+alias ff="fo"
 
 # cd to file
 fff() {

@@ -69,7 +69,17 @@ fi
 
 
 # execute right build system
-if [ -f build.ninja ]; then
+if [ -f build/build.ninja ]; then
+    cd build
+    $pretty ninja -j$NUMCORES $args
+    retval=$?
+    cd ..
+elif [ -f build/Makefile ]; then
+    cd build
+    $pretty make -j$NUMCORES $args
+    retval=$?
+    cd ..
+elif [ -f build.ninja ]; then
     $pretty ninja -j$NUMCORES $args
     retval=$?
 elif [ -f Makefile ]; then

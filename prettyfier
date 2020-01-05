@@ -31,10 +31,12 @@ $1 ${*:2} 2>&1 | \
     -e "s/\(^[^#^[]*\)CXX /\1${BUILD}CXX ${NORMAL}/g" \
     -e "s/\(^[^#^[]*\)CFG /\1${BUILD}CFG ${NORMAL}/g" \
     -e "s/\(^[^#^[]*\)GEN  /\1${BUILD}GEN ${NORMAL}/g" \
+    -e "s/\(^[^#^[]*\)PROV  /\1${BUILD}PROV ${NORMAL}/g" \
     -e "s/\(^[^#^[]*\)ANT /\1${BUILD}ANT ${NORMAL}/g" \
     -e "s/\(^[^#^[^U]*\)LD /\1${BUILD}LD ${NORMAL}/g" \
     -e "s/\(^[^#]*\)Note:/\1${GREY}Note:${NORMAL}/gI" \
     -e "s/\(^###*\) \(.*\)/${GREY}\1${BLUE} \2${NORMAL}/gI" \
+    -e "s/\(^#\) \(.*\)/${GREY}\1${BLUE} \2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Built.*$\)/\1${GREY}\2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Bui.*$\)/\1${GREEN}\2${NORMAL}/gI" \
     -e "s/\(^\[.*\]\)\( Lin.*$\)/\1${GREENBOLD}\2${NORMAL}/gI" \
@@ -67,8 +69,11 @@ $1 ${*:2} 2>&1 | \
     -e "s/\(UNKNOWN\)/${GREYBOLD}\1${NORMAL}/gI" \
     -e "s/\(WARNING\)/${YELLOWBOLD}\1${NORMAL}/g" \
     -e "s/\(OK\)/${GREENBOLD}\1${NORMAL}/g" \
+    -e "s/\(RSU:\)/${PURPLEBOLD}\1${NORMAL}/g" \
+    -e "s/\(MOD:\)/${BLUE}\1${NORMAL}/g" \
     -e "s/\(True\)/${GREEN}\1${NORMAL}/gI" \
     -e "s/\(ERROR\)/${REDBOLD}\1${NORMAL}/g" \
     -e "s/\(False\)/${RED}\1${NORMAL}/gI" \
     -e "s/\([{},'\"=]\)/${GREY}\1${NORMAL}/gI" \
+    -e "s/\(^[a-zA-Z]\{3\} [0-9]* \)\([0-9:.]\{6,\}\|:\) \([a-zA-Z0-9.\-]*\) \([a-zA-Z0-9.\-]*\)\(\[*[0-9]*\]*\)/${GREY}\2 ${KEYWORD}\4${GREY}\5${NORMAL}/gI" \
     -e "s/^[+]/${PURPLEBOLD}+${NORMAL}/gI" ; test ${PIPESTATUS[0]} -eq 0
