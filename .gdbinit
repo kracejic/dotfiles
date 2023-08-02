@@ -4,12 +4,35 @@ python
 #
 # https://github.com/cyrus-and/gdb-dashboard
 
-# import ast
-# import fcntl
+# License ----------------------------------------------------------------------
+
+# Copyright (c) 2015-2020 Andrea Cardaci <cyrus.and@gmail.com>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# Imports ----------------------------------------------------------------------
+
+import ast
+import math
 import os
 import re
 import struct
-import termios
 import traceback
 
 # Common attributes ------------------------------------------------------------
@@ -26,36 +49,72 @@ class R():
                 'type': bool
             },
             'syntax_highlighting': {
-                'doc': """Pygments style to use for syntax highlighting.
-Using an empty string (or a name not in the list) disables this feature.
-The list of all the available styles can be obtained with (from GDB itself):
+                'doc': '''Pygments style to use for syntax highlighting.
 
-    python from pygments.styles import get_all_styles as styles
-    python for s in styles(): print(s)
-""",
-                'default': 'monokai',
-                'type': str
+Using an empty string (or a name not in the list) disables this feature. The
+list of all the available styles can be obtained with (from GDB itself):
+
+    python from pygments.styles import *
+    python for style in get_all_styles(): print(style)''',
+                'default': 'monokai'
+            },
+            'discard_scrollback': {
+                'doc': '''Discard the scrollback buffer at each redraw.
+
+This makes scrolling less confusing by discarding the previously printed
+dashboards but only works with certain terminals.''',
+                'default': True,
+                'type': bool
+            },
+            # values formatting
+            'compact_values': {
+                'doc': 'Display complex objects in a single line.',
+                'default': True,
+                'type': bool
+            },
+            'max_value_length': {
+                'doc': 'Maximum length of displayed values before truncation.',
+                'default': 100,
+                'type': int
+            },
+            'value_truncation_string': {
+                'doc': 'String to use to mark value truncation.',
+                'default': '…',
+            },
+            'dereference': {
+                'doc': 'Annotate pointers with the pointed value.',
+                'default': True,
+                'type': bool
             },
             # prompt
             'prompt': {
-                'doc': """Command prompt.
-This value is parsed as a Python format string in which `{status}` is expanded
-with the substitution of either `prompt_running` or `prompt_not_running`
-attributes, according to the target program status. The resulting string must be
-a valid GDB prompt, see the command `python print(gdb.prompt.prompt_help())`""",
+                'doc': '''GDB prompt.
+
+This value is used as a Python format string where `{status}` is expanded with
+the substitution of either `prompt_running` or `prompt_not_running` attributes,
+according to the target program status. The resulting string must be a valid GDB
+prompt, see the command `python print(gdb.prompt.prompt_help())`''',
                 'default': '{status}'
             },
             'prompt_running': {
-                'doc': """`{status}` when the target program is running.
-See the `prompt` attribute. This value is parsed as a Python format string in
-which `{pid}` is expanded with the process identifier of the target program.""",
+                'doc': '''Define the value of `{status}` when the target program is running.
+
+See the `prompt` attribute. This value is used as a Python format string where
+`{pid}` is expanded with the process identifier of the target program.''',
                 'default': '\[\e[1;35m\]>>>\[\e[0m\]'
             },
             'prompt_not_running': {
-                'doc': '`{status}` when the target program is not running.',
+                'doc': '''Define the value of `{status}` when the target program is running.
+
+See the `prompt` attribute. This value is used as a Python format string.''',
                 'default': '\[\e[1;30m\]>>>\[\e[0m\]'
             },
             # divider
+            'omit_divider': {
+                'doc': 'Omit the divider in external outputs when only one module is displayed.',
+                'default': False,
+                'type': bool
+            },
             'divider_fill_char_primary': {
                 'doc': 'Filler around the label for primary dividers',
                 'default': '─'
@@ -78,7 +137,7 @@ which `{pid}` is expanded with the process identifier of the target program.""",
             },
             'divider_label_style_on_secondary': {
                 'doc': 'Label style for non-empty secondary dividers',
-                'default': '0'
+                'default': '1;37'
             },
             'divider_label_style_off_primary': {
                 'doc': 'Label style for empty primary dividers',
@@ -120,10 +179,49 @@ which `{pid}` is expanded with the process identifier of the target program.""",
             },
             'style_error': {
                 'default': '31'
+            },
+            'style_critical': {
+                'default': '0;41'
             }
         }
 
 # Common -----------------------------------------------------------------------
+
+class Beautifier():
+
+    def __init__(self, hint, tab_size=4):
+        self.tab_spaces = ' ' * tab_size
+        self.active = False
+        if not R.ansi or not R.syntax_highlighting:
+            return
+        # attempt to set up Pygments
+        try:
+            import pygments
+            from pygments.lexers import GasLexer, NasmLexer
+            from pygments.formatters import Terminal256Formatter
+            if hint == 'att':
+                self.lexer = GasLexer()
+            elif hint == 'intel':
+                self.lexer = NasmLexer()
+            else:
+                from pygments.lexers import get_lexer_for_filename
+                self.lexer = get_lexer_for_filename(hint, stripnl=False)
+            self.formatter = Terminal256Formatter(style=R.syntax_highlighting)
+            self.active = True
+        except ImportError:
+            # Pygments not available
+            pass
+        except pygments.util.ClassNotFound:
+            # no lexer for this file or invalid style
+            pass
+
+    def process(self, source):
+        # convert tabs anyway
+        source = source.replace('\t', self.tab_spaces)
+        if self.active:
+            import pygments
+            source = pygments.highlight(source, self.lexer, self.formatter)
+        return source.rstrip('\n')
 
 def run(command):
     return gdb.execute(command, to_string=True)
@@ -171,7 +269,8 @@ def check_ge_zero(x):
 def to_unsigned(value, size=8):
     # values from GDB can be used transparently but are not suitable for
     # being printed as unsigned integers, so a conversion is needed
-    return int(value.cast(gdb.Value(0).type)) % (2 ** (size * 8))
+    mask = (2 ** (size * 8)) - 1
+    return int(value.cast(gdb.Value(mask).type)) & mask
 
 def to_string(value):
     # attempt to convert an inferior value to string; OK when (Python 3 ||
@@ -181,62 +280,142 @@ def to_string(value):
         value_string = str(value)
     except UnicodeEncodeError:
         value_string = unicode(value).encode('utf8')
+    except gdb.error as e:
+        value_string = ansi(e, R.style_error)
     return value_string
 
 def format_address(address):
     pointer_size = gdb.parse_and_eval('$pc').type.sizeof
     return ('0x{{:0{}x}}').format(pointer_size * 2).format(address)
 
-class Highlighter():
-    def __init__(self, filename):
-        self.active = False
-        if not R.ansi:
-            return
-        # attempt to set up Pygments
+def format_value(value, compact=None):
+    # format references as referenced values
+    # (TYPE_CODE_RVALUE_REF is not supported by old GDB)
+    if value.type.code in (getattr(gdb, 'TYPE_CODE_REF', None),
+                           getattr(gdb, 'TYPE_CODE_RVALUE_REF', None)):
         try:
-            import pygments.lexers
-            import pygments.formatters
-            formatter_class = pygments.formatters.Terminal256Formatter
-            self.formatter = formatter_class(style=R.syntax_highlighting)
-            self.lexer = pygments.lexers.get_lexer_for_filename(filename)
-            self.active = True
-        except ImportError:
-            # Pygments not available
-            pass
-        except pygments.util.ClassNotFound:
-            # no lexer for this file or invalid style
-            pass
+            value = value.referenced_value()
+        except gdb.error as e:
+            return ansi(e, R.style_error)
+    # format the value
+    out = to_string(value)
+    # dereference up to the actual value if requested
+    if R.dereference and value.type.code == gdb.TYPE_CODE_PTR:
+        while value.type.code == gdb.TYPE_CODE_PTR:
+            try:
+                value = value.dereference()
+            except gdb.error as e:
+                break
+        else:
+            formatted = to_string(value)
+            out += '{} {}'.format(ansi(':', R.style_low), formatted)
+    # compact the value
+    if compact is not None and compact or R.compact_values:
+        out = re.sub(r'$\s*', '', out, flags=re.MULTILINE)
+    # truncate the value
+    if R.max_value_length > 0 and len(out) > R.max_value_length:
+        out = out[0:R.max_value_length] + ansi(R.value_truncation_string, R.style_critical)
+    return out
 
-    def process(self, source):
-        if self.active:
-            import pygments
-            source = pygments.highlight(source, self.lexer, self.formatter)
-        return source.rstrip('\n')
+# XXX parsing the output of `info breakpoints` is apparently the best option
+# right now, see: https://sourceware.org/bugzilla/show_bug.cgi?id=18385
+# XXX GDB version 7.11 (quire recent) does not have the pending field, so
+# fall back to the parsed information
+def fetch_breakpoints(watchpoints=False, pending=False):
+    # fetch breakpoints addresses
+    parsed_breakpoints = dict()
+    for line in run('info breakpoints').split('\n'):
+        # just keep numbered lines
+        if not line or not line[0].isdigit():
+            continue
+        # extract breakpoint number, address and pending status
+        fields = line.split()
+        number = int(fields[0].split('.')[0])
+        try:
+            if len(fields) >= 5 and fields[1] == 'breakpoint':
+                # multiple breakpoints have no address yet
+                is_pending = fields[4] == '<PENDING>'
+                is_multiple = fields[4] == '<MULTIPLE>'
+                address = None if is_multiple or is_pending else int(fields[4], 16)
+                is_enabled = fields[3] == 'y'
+                address_info = address, is_enabled
+                parsed_breakpoints[number] = [address_info], is_pending
+            elif len(fields) >= 3 and number in parsed_breakpoints:
+                # add this address to the list of multiple locations
+                address = int(fields[2], 16)
+                is_enabled = fields[1] == 'y'
+                address_info = address, is_enabled
+                parsed_breakpoints[number][0].append(address_info)
+            else:
+                # watchpoints
+                parsed_breakpoints[number] = [], False
+        except ValueError:
+            pass
+    # fetch breakpoints from the API and complement with address and source
+    # information
+    breakpoints = []
+    # XXX in older versions gdb.breakpoints() returns None
+    for gdb_breakpoint in gdb.breakpoints() or []:
+        addresses, is_pending = parsed_breakpoints[gdb_breakpoint.number]
+        is_pending = getattr(gdb_breakpoint, 'pending', is_pending)
+        if not pending and is_pending:
+            continue
+        if not watchpoints and gdb_breakpoint.type != gdb.BP_BREAKPOINT:
+            continue
+        # add useful fields to the object
+        breakpoint = dict()
+        breakpoint['number'] = gdb_breakpoint.number
+        breakpoint['type'] = gdb_breakpoint.type
+        breakpoint['enabled'] = gdb_breakpoint.enabled
+        breakpoint['location'] = gdb_breakpoint.location
+        breakpoint['expression'] = gdb_breakpoint.expression
+        breakpoint['condition'] = gdb_breakpoint.condition
+        breakpoint['temporary'] = gdb_breakpoint.temporary
+        breakpoint['hit_count'] = gdb_breakpoint.hit_count
+        breakpoint['pending'] = is_pending
+        # add addresses and source information
+        breakpoint['addresses'] = []
+        for address, is_enabled in addresses:
+            if address:
+                sal = gdb.find_pc_line(address)
+            breakpoint['addresses'].append({
+                'address': address,
+                'enabled': is_enabled,
+                'file_name': sal.symtab.filename if address and sal.symtab else None,
+                'file_line': sal.line if address else None
+            })
+        breakpoints.append(breakpoint)
+    return breakpoints
 
 # Dashboard --------------------------------------------------------------------
 
 class Dashboard(gdb.Command):
-    """Redisplay the dashboard."""
+    '''Redisplay the dashboard.'''
 
     def __init__(self):
-        gdb.Command.__init__(self, 'dashboard',
-                             gdb.COMMAND_USER, gdb.COMPLETE_NONE, True)
-        self.output = None  # main terminal
+        gdb.Command.__init__(self, 'dashboard', gdb.COMMAND_USER, gdb.COMPLETE_NONE, True)
         # setup subcommands
+        Dashboard.ConfigurationCommand(self)
         Dashboard.OutputCommand(self)
         Dashboard.EnabledCommand(self)
         Dashboard.LayoutCommand(self)
         # setup style commands
         Dashboard.StyleCommand(self, 'dashboard', R, R.attributes())
-        # enable by default
+        # main terminal
+        self.output = None
+        # used to inhibit redisplays during init parsing
+        self.inhibited = None
+        # enabled by default
         self.enabled = None
         self.enable()
 
     def on_continue(self, _):
         # try to contain the GDB messages in a specified area unless the
         # dashboard is printed to a separate file (dashboard -output ...)
-        if self.is_running() and not self.output:
-            width = Dashboard.get_term_width()
+        # or there are no modules to display in the main terminal
+        enabled_modules = list(filter(lambda m: not m.output and m.enabled, self.modules))
+        if self.is_running() and not self.output and len(enabled_modules) > 0:
+            width, _ = Dashboard.get_term_size()
             gdb.write(Dashboard.clear_screen())
             gdb.write(divider(width, 'Output/messages', True))
             gdb.write('\n')
@@ -254,13 +433,11 @@ class Dashboard(gdb.Command):
         outputs.add(self.output)
         outputs.update(module.output for module in self.modules)
         outputs.remove(None)
-        # clean the screen and notify to avoid confusion
+        # reset the terminal status
         for output in outputs:
             try:
                 with open(output, 'w') as fs:
                     fs.write(Dashboard.reset_terminal())
-                    fs.write(Dashboard.clear_screen())
-                    fs.write('--- EXITED ---')
             except:
                 # skip cleanup for invalid outputs
                 pass
@@ -291,7 +468,7 @@ class Dashboard(gdb.Command):
 
     def redisplay(self, style_changed=False):
         # manually redisplay the dashboard
-        if self.is_running():
+        if self.is_running() and not self.inhibited:
             self.render(True, style_changed)
 
     def inferior_pid(self):
@@ -302,75 +479,94 @@ class Dashboard(gdb.Command):
 
     def render(self, clear_screen, style_changed=False):
         # fetch module content and info
+        all_disabled = True
         display_map = dict()
         for module in self.modules:
-            if not module.enabled:
-                continue
             # fall back to the global value
             output = module.output or self.output
-            display_map.setdefault(output, []).append(module.instance)
-        # notify the user if the output is empty, on the main terminal
-        if not display_map:
-            # write the error message
-            width = Dashboard.get_term_width()
-            gdb.write(divider(width, 'Error', True))
-            gdb.write('\n')
-            if self.modules:
-                gdb.write('No module to display (see `help dashboard`)')
+            # add the instance or None if disabled
+            if module.enabled:
+                all_disabled = False
+                instance = module.instance
             else:
-                gdb.write('No module loaded')
-            # write the terminator
-            gdb.write('\n')
-            gdb.write(divider(width, primary=True))
-            gdb.write('\n')
-            gdb.flush()
-            return
+                instance = None
+            display_map.setdefault(output, []).append(instance)
         # process each display info
         for output, instances in display_map.items():
             try:
-                fs = None
+                buf = ''
                 # use GDB stream by default
+                fs = None
                 if output:
                     fs = open(output, 'w')
                     fd = fs.fileno()
-                    # setup the terminal
-                    fs.write(Dashboard.hide_cursor())
+                    fs.write(Dashboard.setup_terminal())
                 else:
                     fs = gdb
-                    fd = 1
-                # get the terminal width (default main terminal if either
-                # the output is not a file)
+                    fd = 1  # stdout
+                # get the terminal size (default main terminal if either the
+                # output is not a file)
                 try:
-                    width = Dashboard.get_term_width(fd)
+                    width, height = Dashboard.get_term_size(fd)
                 except:
-                    width = Dashboard.get_term_width()
+                    width, height = Dashboard.get_term_size()
                 # clear the "screen" if requested for the main terminal,
                 # auxiliary terminals are always cleared
                 if fs is not gdb or clear_screen:
-                    fs.write(Dashboard.clear_screen())
+                    buf += Dashboard.clear_screen()
+                # show message if all the modules in this output are disabled
+                if not any(instances):
+                    # skip the main terminal
+                    if fs is gdb:
+                        continue
+                    # write the error message
+                    buf += divider(width, 'Warning', True)
+                    buf += '\n'
+                    if self.modules:
+                        buf += 'No module to display (see `dashboard -layout`)'
+                    else:
+                        buf += 'No module loaded'
+                    # write the terminator only in the main terminal
+                    buf += '\n'
+                    if fs is gdb:
+                        buf += divider(width, primary=True)
+                        buf += '\n'
+                    fs.write(buf)
+                    continue
                 # process all the modules for that output
                 for n, instance in enumerate(instances, 1):
-                    # ask the module to generate the content
-                    lines = instance.lines(width, style_changed)
-                    # create the divider accordingly
-                    div = divider(width, instance.label(), True, lines)
+                    # skip disabled modules
+                    if not instance:
+                        continue
+                    try:
+                        # ask the module to generate the content
+                        lines = instance.lines(width, height, style_changed)
+                    except Exception as e:
+                        # allow to continue on exceptions in modules
+                        stacktrace = traceback.format_exc().strip()
+                        lines = [ansi(stacktrace, R.style_error)]
+                    # create the divider if needed
+                    div = []
+                    if not R.omit_divider or len(instances) > 1 or fs is gdb:
+                        div = [divider(width, instance.label(), True, lines)]
                     # write the data
-                    fs.write('\n'.join([div] + lines))
+                    buf += '\n'.join(div + lines)
                     # write the newline for all but last unless main terminal
                     if n != len(instances) or fs is gdb:
-                        fs.write('\n')
+                        buf += '\n'
                 # write the final newline and the terminator only if it is the
-                # main terminal to allow the prompt to display correctly
-                if fs is gdb:
-                    fs.write(divider(width, primary=True))
-                    fs.write('\n')
-                fs.flush()
+                # main terminal to allow the prompt to display correctly (unless
+                # there are no modules to display)
+                if fs is gdb and not all_disabled:
+                    buf += divider(width, primary=True)
+                    buf += '\n'
+                fs.write(buf)
             except Exception as e:
                 cause = traceback.format_exc().strip()
                 Dashboard.err('Cannot write the dashboard\n{}'.format(cause))
             finally:
                 # don't close gdb stream
-                if fs is not gdb:
+                if fs and fs is not gdb:
                     fs.close()
 
 # Utility methods --------------------------------------------------------------
@@ -381,20 +577,39 @@ class Dashboard(gdb.Command):
         dashboard = Dashboard()
         Dashboard.set_custom_prompt(dashboard)
         # parse Python inits, load modules then parse GDB inits
+        dashboard.inhibited = True
         Dashboard.parse_inits(True)
         modules = Dashboard.get_modules()
         dashboard.load_modules(modules)
         Dashboard.parse_inits(False)
+        dashboard.inhibited = False
         # GDB overrides
         run('set pagination off')
-        run('alias -a db = dashboard')
+        # display if possible (program running and not explicitly disabled by
+        # some configuration file)
+        if dashboard.enabled:
+            dashboard.redisplay()
 
     @staticmethod
-    def get_term_width(fd=1):  # defaults to the main terminal
-        # first 2 shorts (4 byte) of struct winsize
-        # raw = fcntl.ioctl(fd, termios.TIOCGWINSZ, ' ' * 4)
-        # height, width = struct.unpack('hh', raw)
-        return int(os.popen('stty size', 'r').read().split()[1])
+    def get_term_size(fd=1):  # defaults to the main terminal
+        try:
+            if sys.platform == 'win32':
+                import curses
+                # XXX always neglects the fd parameter
+                height, width = curses.initscr().getmaxyx()
+                curses.endwin()
+                return int(width), int(height)
+            else:
+                import termios
+                import fcntl
+                # first 2 shorts (4 byte) of struct winsize
+                raw = fcntl.ioctl(fd, termios.TIOCGWINSZ, ' ' * 4)
+                height, width = struct.unpack('hh', raw)
+                return int(width), int(height)
+        except (ImportError, OSError):
+            # this happens when no curses library is found on windows or when
+            # the terminal is not properly configured
+            return 80, 24  # hardcoded fallback value
 
     @staticmethod
     def set_custom_prompt(dashboard):
@@ -419,7 +634,7 @@ class Dashboard(gdb.Command):
                 path = os.path.join(root, init)
                 _, ext = os.path.splitext(path)
                 # either load Python files or GDB
-                if python ^ (ext != '.py'):
+                if python == (ext == '.py'):
                     gdb.execute('source ' + path)
 
     @staticmethod
@@ -460,17 +675,19 @@ class Dashboard(gdb.Command):
     @staticmethod
     def clear_screen():
         # ANSI: move the cursor to top-left corner and clear the screen
-        return '\x1b[H\x1b[J'
+        # (optionally also clear the scrollback buffer if supported by the
+        # terminal)
+        return '\x1b[H\x1b[J' + '\x1b[3J' if R.discard_scrollback else ''
 
     @staticmethod
-    def hide_cursor():
-        # ANSI: hide cursor
-        return '\x1b[?25l'
+    def setup_terminal():
+        # ANSI: enable alternative screen buffer and hide cursor
+        return '\x1b[?1049h\x1b[?25l'
 
     @staticmethod
     def reset_terminal():
-        # ANSI: reset to initial state
-        return '\x1bc'
+        # ANSI: disable alternative screen buffer and show cursor
+        return '\x1b[?1049l\x1b[?25h'
 
 # Module descriptor ------------------------------------------------------------
 
@@ -502,23 +719,19 @@ class Dashboard(gdb.Command):
                         print('{} module {}'.format(module.name, status))
                 else:
                     Dashboard.err('Wrong argument "{}"'.format(arg))
-            doc_brief = 'Configure the {} module.'.format(self.name)
-            doc_extended = 'Toggle the module visibility.'
-            doc = '{}\n{}\n\n{}'.format(doc_brief, doc_extended, self.doc)
+            doc_brief = 'Configure the {} module, with no arguments toggles its visibility.'.format(self.name)
+            doc = '{}\n\n{}'.format(doc_brief, self.doc)
             Dashboard.create_command(self.prefix, invoke, doc, True)
 
         def add_output_command(self, dashboard):
             Dashboard.OutputCommand(dashboard, self.prefix, self)
 
         def add_style_command(self, dashboard):
-            if 'attributes' in dir(self.instance):
-                Dashboard.StyleCommand(dashboard, self.prefix, self.instance,
-                                       self.instance.attributes())
+            Dashboard.StyleCommand(dashboard, self.prefix, self.instance, self.instance.attributes())
 
         def add_subcommands(self, dashboard):
-            if 'commands' in dir(self.instance):
-                for name, command in self.instance.commands().items():
-                    self.add_subcommand(dashboard, name, command)
+            for name, command in self.instance.commands().items():
+                self.add_subcommand(dashboard, name, command)
 
         def add_subcommand(self, dashboard, name, command):
             action = command['action']
@@ -541,25 +754,96 @@ class Dashboard(gdb.Command):
 
 # GDB commands -----------------------------------------------------------------
 
+    # handler for the `dashboard` command itself
     def invoke(self, arg, from_tty):
         arg = Dashboard.parse_arg(arg)
-        if arg == '':
-            if self.is_running():
-                self.redisplay()
-            else:
-                Dashboard.err('Is the target program running?')
-        else:
+        # show messages for checks in redisplay
+        if arg != '':
             Dashboard.err('Wrong argument "{}"'.format(arg))
+        elif not self.is_running():
+            Dashboard.err('Is the target program running?')
+        else:
+            self.redisplay()
+
+    class ConfigurationCommand(gdb.Command):
+        '''Dump or save the dashboard configuration.
+
+With an optional argument the configuration will be written to the specified
+file.
+
+This command allows to configure the dashboard live then make the changes
+permanent, for example:
+
+    dashboard -configuration ~/.gdbinit.d/init
+
+At startup the `~/.gdbinit.d/` directory tree is walked and files are evaluated
+in alphabetical order but giving priority to Python files. This is where user
+configuration files must be placed.'''
+
+        def __init__(self, dashboard):
+            gdb.Command.__init__(self, 'dashboard -configuration',
+                                 gdb.COMMAND_USER, gdb.COMPLETE_FILENAME)
+            self.dashboard = dashboard
+
+        def invoke(self, arg, from_tty):
+            arg = Dashboard.parse_arg(arg)
+            if arg:
+                with open(os.path.expanduser(arg), 'w') as fs:
+                    fs.write('# auto generated by GDB dashboard\n\n')
+                    self.dump(fs)
+            self.dump(gdb)
+
+        def dump(self, fs):
+            # dump layout
+            self.dump_layout(fs)
+            # dump styles
+            self.dump_style(fs, R)
+            for module in self.dashboard.modules:
+                self.dump_style(fs, module.instance, module.prefix)
+            # dump outputs
+            self.dump_output(fs, self.dashboard)
+            for module in self.dashboard.modules:
+                self.dump_output(fs, module, module.prefix)
+
+        def dump_layout(self, fs):
+            layout = ['dashboard -layout']
+            for module in self.dashboard.modules:
+                mark = '' if module.enabled else '!'
+                layout.append('{}{}'.format(mark, module.name))
+            fs.write(' '.join(layout))
+            fs.write('\n')
+
+        def dump_style(self, fs, obj, prefix='dashboard'):
+            attributes = getattr(obj, 'attributes', lambda: dict())()
+            for name, attribute in attributes.items():
+                real_name = attribute.get('name', name)
+                default = attribute.get('default')
+                value = getattr(obj, real_name)
+                if value != default:
+                    fs.write('{} -style {} {!r}\n'.format(prefix, name, value))
+
+        def dump_output(self, fs, obj, prefix='dashboard'):
+            output = getattr(obj, 'output')
+            if output:
+                fs.write('{} -output {}\n'.format(prefix, output))
 
     class OutputCommand(gdb.Command):
-        """Set the output file/TTY for both the dashboard and modules.
+        '''Set the output file/TTY for the whole dashboard or single modules.
+
 The dashboard/module will be written to the specified file, which will be
 created if it does not exist. If the specified file identifies a terminal then
-its width will be used to format the dashboard, otherwise falls back to the
-width of the main GDB terminal. Without argument the dashboard, the
-output/messages and modules which do not specify the output will be printed on
-standard output (default). Without argument the module will be printed where the
-dashboard will be printed."""
+its geometry will be used, otherwise it falls back to the geometry of the main
+GDB terminal.
+
+When invoked without argument on the dashboard, the output/messages and modules
+which do not specify an output themselves will be printed on standard output
+(default).
+
+When invoked without argument on a module, it will be printed where the
+dashboard will be printed.
+
+An overview of all the outputs can be obtained with the `dashboard -layout`
+command.'''
 
         def __init__(self, dashboard, prefix=None, obj=None):
             if not prefix:
@@ -567,13 +851,20 @@ dashboard will be printed."""
             if not obj:
                 obj = dashboard
             prefix = prefix + ' -output'
-            gdb.Command.__init__(self, prefix,
-                                 gdb.COMMAND_USER, gdb.COMPLETE_FILENAME)
+            gdb.Command.__init__(self, prefix, gdb.COMMAND_USER, gdb.COMPLETE_FILENAME)
             self.dashboard = dashboard
             self.obj = obj  # None means the dashboard itself
 
         def invoke(self, arg, from_tty):
             arg = Dashboard.parse_arg(arg)
+            # reset the terminal status
+            if self.obj.output:
+                try:
+                    with open(self.obj.output, 'w') as fs:
+                        fs.write(Dashboard.reset_terminal())
+                except:
+                    # just do nothing if the file is not writable
+                    pass
             # set or open the output file
             if arg == '':
                 self.obj.output = None
@@ -583,8 +874,9 @@ dashboard will be printed."""
             self.dashboard.redisplay()
 
     class EnabledCommand(gdb.Command):
-        """Enable or disable the dashboard [on|off].
-The current status is printed if no argument is present."""
+        '''Enable or disable the dashboard.
+
+The current status is printed if no argument is present.'''
 
         def __init__(self, dashboard):
             gdb.Command.__init__(self, 'dashboard -enabled', gdb.COMMAND_USER)
@@ -608,14 +900,18 @@ The current status is printed if no argument is present."""
             return Dashboard.complete(word, ['on', 'off'])
 
     class LayoutCommand(gdb.Command):
-        """Set or show the dashboard layout.
+        '''Set or show the dashboard layout.
+
 Accepts a space-separated list of directive. Each directive is in the form
 "[!]<module>". Modules in the list are placed in the dashboard in the same order
 as they appear and those prefixed by "!" are disabled by default. Omitted
-modules are hidden and placed at the bottom in alphabetical order. Without
-arguments the current layout is shown where the first line uses the same form
-expected by the input while the remaining depict the current status of output
-files."""
+modules are hidden and placed at the bottom in alphabetical order.
+
+Without arguments the current layout is shown where the first line uses the same
+form expected by the input while the remaining depict the current status of
+output files.
+
+Passing `!` as a single argument resets the dashboard original layout.'''
 
         def __init__(self, dashboard):
             gdb.Command.__init__(self, 'dashboard -layout', gdb.COMMAND_USER)
@@ -625,79 +921,86 @@ files."""
             arg = Dashboard.parse_arg(arg)
             directives = str(arg).split()
             if directives:
-                self.layout(directives)
-                if from_tty and not self.dashboard.is_running():
-                    self.show()
+                # apply the layout
+                if directives == ['!']:
+                    self.reset()
+                else:
+                    if not self.layout(directives):
+                        return  # in case of errors
+                # redisplay or otherwise notify
+                if from_tty:
+                    if self.dashboard.is_running():
+                        self.dashboard.redisplay()
+                    else:
+                        self.show()
             else:
                 self.show()
 
+        def reset(self):
+            modules = self.dashboard.modules
+            modules.sort(key=lambda module: module.name)
+            for module in modules:
+                module.enabled = True
+
         def show(self):
-            global_str = 'Global'
-            max_name_len = len(global_str)
-            # print directives
-            modules = []
+            global_str = 'Dashboard'
+            default = '(default TTY)'
+            max_name_len = max(len(module.name) for module in self.dashboard.modules)
+            max_name_len = max(max_name_len, len(global_str))
+            fmt = '{{}}{{:{}s}}{{}}'.format(max_name_len + 2)
+            print((fmt + '\n').format(' ', global_str, self.dashboard.output or default))
             for module in self.dashboard.modules:
-                max_name_len = max(max_name_len, len(module.name))
-                mark = '' if module.enabled else '!'
-                modules.append('{}{}'.format(mark, module.name))
-            print(' '.join(modules))
-            # print outputs
-            default = '(default)'
-            fmt = '{{:{}s}}{{}}'.format(max_name_len + 2)
-            print(('\n' + fmt + '\n').format(global_str,
-                                             self.dashboard.output or default))
-            for module in self.dashboard.modules:
+                mark = ' ' if module.enabled else '!'
                 style = R.style_high if module.enabled else R.style_low
-                line = fmt.format(module.name, module.output or default)
+                line = fmt.format(mark, module.name, module.output or default)
                 print(ansi(line, style))
 
         def layout(self, directives):
             modules = self.dashboard.modules
+            # parse and check directives
+            parsed_directives = []
+            selected_modules = set()
+            for directive in directives:
+                enabled = (directive[0] != '!')
+                name = directive[not enabled:]
+                if name in selected_modules:
+                    Dashboard.err('Module "{}" already set'.format(name))
+                    return False
+                if next((False for module in modules if module.name == name), True):
+                    Dashboard.err('Cannot find module "{}"'.format(name))
+                    return False
+                parsed_directives.append((name, enabled))
+                selected_modules.add(name)
             # reset visibility
             for module in modules:
                 module.enabled = False
             # move and enable the selected modules on top
             last = 0
-            n_enabled = 0
-            for directive in directives:
-                # parse next directive
-                enabled = (directive[0] != '!')
-                name = directive[not enabled:]
-                try:
-                    # it may actually start from last, but in this way repeated
-                    # modules can be handler transparently and without error
-                    todo = enumerate(modules[last:], start=last)
-                    index = next(i for i, m in todo if name == m.name)
-                    modules[index].enabled = enabled
-                    modules.insert(last, modules.pop(index))
-                    last += 1
-                    n_enabled += enabled
-                except StopIteration:
-                    def find_module(x):
-                        return x.name == name
-                    first_part = modules[:last]
-                    if len(filter(find_module, first_part)) == 0:
-                        Dashboard.err('Cannot find module "{}"'.format(name))
-                    else:
-                        Dashboard.err('Module "{}" already set'.format(name))
-                    continue
-            # redisplay the dashboard
-            if n_enabled:
-                self.dashboard.redisplay()
+            for name, enabled in parsed_directives:
+                todo = enumerate(modules[last:], start=last)
+                index = next(index for index, module in todo if name == module.name)
+                modules[index].enabled = enabled
+                modules.insert(last, modules.pop(index))
+                last += 1
+            return True
 
         def complete(self, text, word):
             all_modules = (m.name for m in self.dashboard.modules)
             return Dashboard.complete(word, all_modules)
 
     class StyleCommand(gdb.Command):
-        """Access the stylable attributes.
-Without arguments print all the stylable attributes. Subcommands are used to set
-or print (when the value is omitted) individual attributes."""
+        '''Access the stylable attributes.
+
+Without arguments print all the stylable attributes.
+
+When only the name is specified show the current value.
+
+With name and value set the stylable attribute. Values are parsed as Python
+literals and converted to the proper type. '''
 
         def __init__(self, dashboard, prefix, obj, attributes):
             self.prefix = prefix + ' -style'
-            gdb.Command.__init__(self, self.prefix,
-                                 gdb.COMMAND_USER, gdb.COMPLETE_NONE, True)
+            gdb.Command.__init__(self, self.prefix, gdb.COMMAND_USER, gdb.COMPLETE_NONE, True)
             self.dashboard = dashboard
             self.obj = obj
             self.attributes = attributes
@@ -715,8 +1018,11 @@ or print (when the value is omitted) individual attributes."""
                 value = attr_type(attr_default)
                 setattr(self.obj, attr_name, value)
                 # create the command
-                def invoke(self, arg, from_tty, name=name, attr_name=attr_name,
-                           attr_type=attr_type, attr_check=attr_check):
+                def invoke(self, arg, from_tty,
+                           name=name,
+                           attr_name=attr_name,
+                           attr_type=attr_type,
+                           attr_check=attr_check):
                     new_value = Dashboard.parse_arg(arg)
                     if new_value == '':
                         # print the current value
@@ -725,12 +1031,7 @@ or print (when the value is omitted) individual attributes."""
                     else:
                         try:
                             # convert and check the new value
-                            try:
-                                import ast
-                                parsed = ast.literal_eval(new_value)
-                            except ImportError:
-                                parsed = eval(new_value)
-                            print("test: " + str(parsed))
+                            parsed = ast.literal_eval(new_value)
                             value = attr_type(parsed)
                             if not attr_check(value):
                                 msg = 'Invalid value "{}" for "{}"'
@@ -760,53 +1061,152 @@ or print (when the value is omitted) individual attributes."""
 
     # just a tag
     class Module():
-        pass
+        '''Base class for GDB dashboard modules.
+
+        Modules are instantiated once at initialization time and kept during the
+        whole the GDB session.
+
+        The name of a module is automatically obtained by the class name.
+
+        Optionally, a module may include a description which will appear in the
+        GDB help system by specifying a Python docstring for the class. By
+        convention the first line should contain a brief description.'''
+
+        def label(self):
+            '''Return the module label which will appear in the divider.'''
+            pass
+
+        def lines(self, term_width, term_height, style_changed):
+            '''Return a list of strings which will form the module content.
+
+            When a module is temporarily unable to produce its content, it
+            should return an empty list; its divider will then use the styles
+            with the "off" qualifier.
+
+            term_width and term_height are the dimension of the terminal where
+            this module will be displayed. If `style_changed` is `True` then
+            some attributes have changed since the last time so the
+            implementation may want to update its status.'''
+            pass
+
+        def attributes(self):
+            '''Return the dictionary of available attributes.
+
+            The key is the attribute name and the value is another dictionary
+            with items:
+
+            - `default` is the initial value for this attribute;
+
+            - `doc` is the optional documentation of this attribute which will
+              appear in the GDB help system;
+
+            - `name` is the name of the attribute of the Python object (defaults
+              to the key value);
+
+            - `type` is the Python type of this attribute defaulting to the
+              `str` type, it is used to coerce the value passed as an argument
+              to the proper type, or raise an exception;
+
+            - `check` is an optional control callback which accept the coerced
+              value and returns `True` if the value satisfies the constraint and
+              `False` otherwise.
+
+            Those attributes can be accessed from the implementation using
+            instance variables named `name`.'''
+            return {}
+
+        def commands(self):
+            '''Return the dictionary of available commands.
+
+            The key is the attribute name and the value is another dictionary
+            with items:
+
+            - `action` is the callback to be executed which accepts the raw
+              input string from the GDB prompt, exceptions in these functions
+              will be shown automatically to the user;
+
+            - `doc` is the documentation of this command which will appear in
+              the GDB help system;
+
+            - `completion` is the optional completion policy, one of the
+              `gdb.COMPLETE_*` constants defined in the GDB reference manual
+              (https://sourceware.org/gdb/onlinedocs/gdb/Commands-In-Python.html).'''
+            return {}
 
 # Default modules --------------------------------------------------------------
 
 class Source(Dashboard.Module):
-    """Show the program source code, if available."""
+    '''Show the program source code, if available.'''
 
     def __init__(self):
         self.file_name = None
         self.source_lines = []
         self.ts = None
         self.highlighted = False
+        self.offset = 0
 
     def label(self):
         return 'Source'
 
-    def lines(self, term_width, style_changed):
+    def lines(self, term_width, term_height, style_changed):
+        # skip if the current thread is not stopped
+        if not gdb.selected_thread().is_stopped():
+            return []
         # try to fetch the current line (skip if no line information)
         sal = gdb.selected_frame().find_sal()
         current_line = sal.line
         if current_line == 0:
             return []
-        # reload the source file if changed
-        file_name = sal.symtab.fullname()
-        ts = None
-        try:
-            ts = os.path.getmtime(file_name)
-        except:
-            pass  # delay error check to open()
-        if (style_changed or
-                file_name != self.file_name or  # different file name
-                ts and ts > self.ts):  # file modified in the meanwhile
-            self.file_name = file_name
-            self.ts = ts
+        # try to lookup the source file
+        candidates = [
+            sal.symtab.fullname(),
+            sal.symtab.filename,
+            # XXX GDB also uses absolute filename but it is harder to implement
+            # properly and IMHO useless
+            os.path.basename(sal.symtab.filename)]
+        for candidate in candidates:
+            file_name = candidate
+            ts = None
             try:
-                highlighter = Highlighter(self.file_name)
-                self.highlighted = highlighter.active
-                with open(self.file_name) as source_file:
+                ts = os.path.getmtime(file_name)
+                break
+            except:
+                # try another or delay error check to open()
+                continue
+        # style changed, different file name or file modified in the meanwhile
+        if style_changed or file_name != self.file_name or ts and ts > self.ts:
+            try:
+                # reload the source file if changed
+                with open(file_name) as source_file:
+                    highlighter = Beautifier(file_name, self.tab_size)
+                    self.highlighted = highlighter.active
                     source = highlighter.process(source_file.read())
                     self.source_lines = source.split('\n')
-            except Exception as e:
-                msg = 'Cannot display "{}" ({})'.format(self.file_name, e)
+                # store file name and timestamp only if success to have
+                # persistent errors
+                self.file_name = file_name
+                self.ts = ts
+            except IOError as e:
+                msg = 'Cannot display "{}"'.format(file_name)
                 return [ansi(msg, R.style_error)]
         # compute the line range
-        start = max(current_line - 1 - self.context, 0)
-        end = min(current_line - 1 + self.context + 1, len(self.source_lines))
+        height = self.height or (term_height - 1)
+        start = current_line - 1 - int(height / 2) + self.offset
+        end = start + height
+        # extra at start
+        extra_start = 0
+        if start < 0:
+            extra_start = min(-start, height)
+            start = 0
+        # extra at end
+        extra_end = 0
+        if end > len(self.source_lines):
+            extra_end = min(end - len(self.source_lines), height)
+            end = len(self.source_lines)
+        else:
+            end = max(end, 0)
         # return the source code listing
+        breakpoints = fetch_breakpoints()
         out = []
         number_format = '{{:>{}}}'.format(len(str(end)))
         for number, line in enumerate(self.source_lines[start:end], start + 1):
@@ -816,82 +1216,152 @@ class Source(Dashboard.Module):
                 # the current line has a different style without ANSI
                 if R.ansi:
                     if self.highlighted:
-                        line_format = ansi(number_format,
-                                           R.style_selected_1) + ' {}'
+                        line_format = '{}' + ansi(number_format, R.style_selected_1) + '  {}'
                     else:
-                        line_format = ansi(number_format + ' {}',
-                                           R.style_selected_1)
+                        line_format = '{}' + ansi(number_format + '  {}', R.style_selected_1)
                 else:
                     # just show a plain text indicator
-                    line_format = number_format + '>{}'
+                    line_format = '{}' + number_format + '> {}'
             else:
-                line_format = ansi(number_format, R.style_low) + ' {}'
-            out.append(line_format.format(number, line.rstrip('\n')))
-        return out
+                line_format = '{}' + ansi(number_format, R.style_low) + '  {}'
+            # check for breakpoint presence
+            enabled = None
+            for breakpoint in breakpoints:
+                addresses = breakpoint['addresses']
+                is_root_enabled = addresses[0]['enabled']
+                for address in addresses:
+                    # note, despite the lookup path always use the relative
+                    # (sal.symtab.filename) file name to match source files with
+                    # breakpoints
+                    if address['file_line'] == number and address['file_name'] == sal.symtab.filename:
+                        enabled = enabled or (address['enabled'] and is_root_enabled)
+            if enabled is None:
+                breakpoint = ' '
+            else:
+                breakpoint = ansi('!', R.style_critical) if enabled else ansi('-', R.style_low)
+            out.append(line_format.format(breakpoint, number, line.rstrip('\n')))
+        # return the output along with scroll indicators
+        if len(out) <= height:
+            extra = [ansi('~', R.style_low)]
+            return extra_start * extra + out + extra_end * extra
+        else:
+            return out
 
-    def attributes(self):
+    def commands(self):
         return {
-            'context': {
-                'doc': 'Number of context lines.',
-                'default': 9,
-                'type': int,
-                'check': check_ge_zero
+            'scroll': {
+                'action': self.scroll,
+                'doc': 'Scroll by relative steps or reset if invoked without argument.'
             }
         }
 
+    def attributes(self):
+        return {
+            'height': {
+                'doc': '''Height of the module.
+
+A value of 0 uses the whole height.''',
+                'default': 10,
+                'type': int,
+                'check': check_ge_zero
+            },
+            'tab-size': {
+                'doc': 'Number of spaces used to display the tab character.',
+                'default': 4,
+                'name': 'tab_size',
+                'type': int,
+                'check': check_gt_zero
+            }
+        }
+
+    def scroll(self, arg):
+        if arg:
+            self.offset += int(arg)
+        else:
+            self.offset = 0
+
 class Assembly(Dashboard.Module):
-    """Show the disassembled code surrounding the program counter. The
-instructions constituting the current statement are marked, if available."""
+    '''Show the disassembled code surrounding the program counter.
+
+The instructions constituting the current statement are marked, if available.'''
+
+    def __init__(self):
+        self.offset = 0
+        self.cache_key = None
+        self.cache_asm = None
 
     def label(self):
         return 'Assembly'
 
-    def lines(self, term_width, style_changed):
+    def lines(self, term_width, term_height, style_changed):
+        # skip if the current thread is not stopped
+        if not gdb.selected_thread().is_stopped():
+            return []
+        # flush the cache if the style is changed
+        if style_changed:
+            self.cache_key = None
+        # prepare the highlighter
+        try:
+            flavor = gdb.parameter('disassembly-flavor')
+        except:
+            flavor = 'att'  # not always defined (see #36)
+        highlighter = Beautifier(flavor)
+        # fetch the assembly code
         line_info = None
         frame = gdb.selected_frame()  # PC is here
-        disassemble = frame.architecture().disassemble
+        height = self.height or (term_height - 1)
         try:
-            # try to fetch the function boundaries using the disassemble command
-            output = run('disassemble').split('\n')
-            start = int(re.split('[ :]', output[1][3:], 1)[0], 16)
-            end = int(re.split('[ :]', output[-3][3:], 1)[0], 16)
-            asm = disassemble(start, end_pc=end)
+            # disassemble the current block
+            asm_start, asm_end = self.fetch_function_boundaries()
+            asm = self.fetch_asm(asm_start, asm_end, False, highlighter)
             # find the location of the PC
             pc_index = next(index for index, instr in enumerate(asm)
                             if instr['addr'] == frame.pc())
-            start = max(pc_index - self.context, 0)
-            end = pc_index + self.context + 1
+            # compute the instruction range
+            start = pc_index - int(height / 2) + self.offset
+            end = start + height
+            # extra at start
+            extra_start = 0
+            if start < 0:
+                extra_start = min(-start, height)
+                start = 0
+            # extra at end
+            extra_end = 0
+            if end > len(asm):
+                extra_end = min(end - len(asm), height)
+                end = len(asm)
+            else:
+                end = max(end, 0)
+            # fetch actual interval
             asm = asm[start:end]
             # if there are line information then use it, it may be that
             # line_info is not None but line_info.last is None
             line_info = gdb.find_pc_line(frame.pc())
             line_info = line_info if line_info.last else None
-        except (gdb.error, StopIteration):
+        except (gdb.error, RuntimeError, StopIteration):
             # if it is not possible (stripped binary or the PC is not present in
-            # the output of `disassemble` as per issue #31) start from PC and
-            # end after twice the context
-            asm = disassemble(frame.pc(), count=2 * self.context + 1)
-        # fetch function start if available
-        func_start = None
-        if self.show_function and frame.name():
+            # the output of `disassemble` as per issue #31) start from PC
             try:
-                value = gdb.parse_and_eval(frame.name()).address
-                func_start = to_unsigned(value)
-            except gdb.error:
-                pass  # e.g., @plt
-        # fetch the assembly flavor and the extension used by Pygments
-        try:
-            flavor = gdb.parameter('disassembly-flavor')
-        except:
-            flavor = None  # not always defined (see #36)
-        filename = {
-            'att': '.s',
-            'intel': '.asm'
-        }.get(flavor, '.s')
-        # prepare the highlighter
-        highlighter = Highlighter(filename)
+                extra_start = 0
+                extra_end = 0
+                # allow to scroll down nevertheless
+                clamped_offset = min(self.offset, 0)
+                asm = self.fetch_asm(frame.pc(), height - clamped_offset, True, highlighter)
+                asm = asm[-clamped_offset:]
+            except gdb.error as e:
+                msg = '{}'.format(e)
+                return [ansi(msg, R.style_error)]
+        # fetch function start if available (e.g., not with @plt)
+        func_start = None
+        if self.show_function and frame.function():
+            func_start = to_unsigned(frame.function().value())
+        # compute the maximum offset size
+        if asm and func_start:
+            max_offset = max(len(str(abs(asm[0]['addr'] - func_start))),
+                             len(str(abs(asm[-1]['addr'] - func_start))))
         # return the machine code
-        max_length = max(instr['length'] for instr in asm)
+        breakpoints = fetch_breakpoints()
+        max_length = max(instr['length'] for instr in asm) if asm else 0
         inferior = gdb.selected_inferior()
         out = []
         for index, instr in enumerate(asm):
@@ -902,36 +1372,37 @@ instructions constituting the current statement are marked, if available."""
             if self.show_opcodes:
                 # fetch and format opcode
                 region = inferior.read_memory(addr, length)
-                opcodes = (' '.join('{:02x}'.format(ord(byte))
-                                    for byte in region))
-                opcodes += (max_length - len(region)) * 3 * ' ' + ' '
+                opcodes = (' '.join('{:02x}'.format(ord(byte)) for byte in region))
+                opcodes += (max_length - len(region)) * 3 * ' ' + '  '
             else:
                 opcodes = ''
             # compute the offset if available
             if self.show_function:
                 if func_start:
-                    max_offset = len(str(asm[-1]['addr'] - func_start))
-                    offset = str(addr - func_start).ljust(max_offset)
-                    func_info = '{}+{} '.format(frame.name(), offset)
+                    offset = '{:+d}'.format(addr - func_start)
+                    offset = offset.ljust(max_offset + 1)  # sign
+                    func_info = '{}{}'.format(frame.function(), offset)
                 else:
-                    func_info = '? '
+                    func_info = '?'
             else:
                 func_info = ''
-            format_string = '{}{}{}{}{}'
-            indicator = ' '
-            text = highlighter.process(text)
+            format_string = '{}{}{}{}{}{}'
+            indicator = '  '
+            text = ' ' + text
             if addr == frame.pc():
                 if not R.ansi:
-                    indicator = '>'
+                    indicator = '> '
                 addr_str = ansi(addr_str, R.style_selected_1)
+                indicator = ansi(indicator, R.style_selected_1)
                 opcodes = ansi(opcodes, R.style_selected_1)
                 func_info = ansi(func_info, R.style_selected_1)
                 if not highlighter.active:
                     text = ansi(text, R.style_selected_1)
             elif line_info and line_info.pc <= addr < line_info.last:
                 if not R.ansi:
-                    indicator = ':'
+                    indicator = ': '
                 addr_str = ansi(addr_str, R.style_selected_2)
+                indicator = ansi(indicator, R.style_selected_2)
                 opcodes = ansi(opcodes, R.style_selected_2)
                 func_info = ansi(func_info, R.style_selected_2)
                 if not highlighter.active:
@@ -939,15 +1410,41 @@ instructions constituting the current statement are marked, if available."""
             else:
                 addr_str = ansi(addr_str, R.style_low)
                 func_info = ansi(func_info, R.style_low)
-            out.append(format_string.format(addr_str, indicator,
-                                            opcodes, func_info, text))
-        return out
+            # check for breakpoint presence
+            enabled = None
+            for breakpoint in breakpoints:
+                addresses = breakpoint['addresses']
+                is_root_enabled = addresses[0]['enabled']
+                for address in addresses:
+                    if address['address'] == addr:
+                        enabled = enabled or (address['enabled'] and is_root_enabled)
+            if enabled is None:
+                breakpoint = ' '
+            else:
+                breakpoint = ansi('!', R.style_critical) if enabled else ansi('-', R.style_low)
+            out.append(format_string.format(breakpoint, addr_str, indicator, opcodes, func_info, text))
+        # return the output along with scroll indicators
+        if len(out) <= height:
+            extra = [ansi('~', R.style_low)]
+            return extra_start * extra + out + extra_end * extra
+        else:
+            return out
+
+    def commands(self):
+        return {
+            'scroll': {
+                'action': self.scroll,
+                'doc': 'Scroll by relative steps or reset if invoked without argument.'
+            }
+        }
 
     def attributes(self):
         return {
-            'context': {
-                'doc': 'Number of context instructions.',
-                'default': 3,
+            'height': {
+                'doc': '''Height of the module.
+
+A value of 0 uses the whole height.''',
+                'default': 10,
                 'type': int,
                 'check': check_ge_zero
             },
@@ -965,107 +1462,61 @@ instructions constituting the current statement are marked, if available."""
             }
         }
 
-class Stack(Dashboard.Module):
-    """Show the current stack trace including the function name and the file
-location, if available. Optionally list the frame arguments and locals too."""
+    def scroll(self, arg):
+        if arg:
+            self.offset += int(arg)
+        else:
+            self.offset = 0
+
+    def fetch_function_boundaries(self):
+        frame = gdb.selected_frame()
+        # parse the output of the disassemble GDB command to find the function
+        # boundaries, this should handle cases in which a function spans
+        # multiple discontinuous blocks
+        disassemble = run('disassemble')
+        for block_start, block_end in re.findall(r'Address range 0x([0-9a-f]+) to 0x([0-9a-f]+):', disassemble):
+            block_start = int(block_start, 16)
+            block_end = int(block_end, 16)
+            if block_start <= frame.pc() < block_end:
+                return block_start, block_end - 1 # need to be inclusive
+        # if function information is available then try to obtain the
+        # boundaries by looking at the superblocks
+        block = frame.block()
+        if frame.function():
+            while block and (not block.function or block.function.name != frame.function().name):
+                block = block.superblock
+            block = block or frame.block()
+        return block.start, block.end - 1
+
+    def fetch_asm(self, start, end_or_count, relative, highlighter):
+        # fetch asm from cache or disassemble
+        if self.cache_key == (start, end_or_count):
+            asm = self.cache_asm
+        else:
+            kwargs = {
+                'start_pc': start,
+                'count' if relative else 'end_pc': end_or_count
+            }
+            asm = gdb.selected_frame().architecture().disassemble(**kwargs)
+            self.cache_key = (start, end_or_count)
+            self.cache_asm = asm
+            # syntax highlight the cached entry
+            for instr in asm:
+                instr['asm'] = highlighter.process(instr['asm'])
+        return asm
+
+class Variables(Dashboard.Module):
+    '''Show arguments and locals of the selected frame.'''
 
     def label(self):
-        return 'Stack'
+        return 'Variables'
 
-    def lines(self, term_width, style_changed):
-        frames = []
-        number = 0
-        selected_index = 0
-        frame = gdb.newest_frame()
-        while frame:
-            frame_lines = []
-            # fetch frame info
-            selected = (frame == gdb.selected_frame())
-            if selected:
-                selected_index = number
-            style = R.style_selected_1 if selected else R.style_selected_2
-            frame_id = ansi(str(number), style)
-            info = Stack.get_pc_line(frame, style)
-            frame_lines.append('[{}] {}'.format(frame_id, info))
-            # fetch frame arguments and locals
-            decorator = gdb.FrameDecorator.FrameDecorator(frame)
-            if self.show_arguments:
-                frame_args = decorator.frame_args()
-                args_lines = self.fetch_frame_info(frame, frame_args, 'arg')
-                if args_lines:
-                    frame_lines.extend(args_lines)
-                else:
-                    frame_lines.append(ansi('(no arguments)', R.style_low))
-            if self.show_locals:
-                frame_locals = decorator.frame_locals()
-                locals_lines = self.fetch_frame_info(frame, frame_locals, 'loc')
-                if locals_lines:
-                    frame_lines.extend(locals_lines)
-                else:
-                    frame_lines.append(ansi('(no locals)', R.style_low))
-            # add frame
-            frames.append(frame_lines)
-            # next
-            frame = frame.older()
-            number += 1
-        # format the output
-        if not self.limit or self.limit >= len(frames):
-            start = 0
-            end = len(frames)
-            more = False
-        else:
-            start = selected_index
-            end = min(len(frames), start + self.limit)
-            more = (len(frames) - start > self.limit)
-        lines = []
-        for frame_lines in frames[start:end]:
-            lines.extend(frame_lines)
-        # add the placeholder
-        if more:
-            lines.append('[{}]'.format(ansi('+', R.style_selected_2)))
-        return lines
-
-    def fetch_frame_info(self, frame, data, prefix):
-        prefix = ansi(prefix, R.style_low)
-        lines = []
-        for elem in data or []:
-            name = elem.sym
-            value = to_string(elem.sym.value(frame))
-            lines.append('{} {} = {}'.format(prefix, name, value))
-        return lines
-
-    @staticmethod
-    def get_pc_line(frame, style):
-        frame_pc = ansi(format_address(frame.pc()), style)
-        info = 'from {}'.format(frame_pc)
-        if frame.name():
-            frame_name = ansi(frame.name(), style)
-            try:
-                # try to compute the offset relative to the current function
-                value = gdb.parse_and_eval(frame.name()).address
-                # it can be None even if it is part of the "stack" (C++)
-                if value:
-                    func_start = to_unsigned(value)
-                    offset = frame.pc() - func_start
-                    frame_name += '+' + ansi(str(offset), style)
-            except gdb.error:
-                pass  # e.g., @plt
-            info += ' in {}'.format(frame_name)
-            sal = frame.find_sal()
-            if sal.symtab:
-                file_name = ansi(sal.symtab.filename, style)
-                file_line = ansi(str(sal.line), style)
-                info += ' at {}:{}'.format(file_name, file_line)
-        return info
+    def lines(self, term_width, term_height, style_changed):
+        return Variables.format_frame(
+            gdb.selected_frame(), self.show_arguments, self.show_locals, self.compact, self.align, self.sort)
 
     def attributes(self):
         return {
-            'limit': {
-                'doc': 'Maximum number of displayed frames (0 means no limit).',
-                'default': 2,
-                'type': int,
-                'check': check_ge_zero
-            },
             'arguments': {
                 'doc': 'Frame arguments visibility flag.',
                 'default': True,
@@ -1074,26 +1525,210 @@ location, if available. Optionally list the frame arguments and locals too."""
             },
             'locals': {
                 'doc': 'Frame locals visibility flag.',
-                'default': False,
+                'default': True,
                 'name': 'show_locals',
+                'type': bool
+            },
+            'compact': {
+                'doc': 'Single-line display flag.',
+                'default': True,
+                'type': bool
+            },
+            'align': {
+                'doc': 'Align variables in column flag (only if not compact).',
+                'default': False,
+                'type': bool
+            },
+            'sort': {
+                'doc': 'Sort variables by name.',
+                'default': False,
                 'type': bool
             }
         }
 
+    @staticmethod
+    def format_frame(frame, show_arguments, show_locals, compact, align, sort):
+        out = []
+        # fetch frame arguments and locals
+        decorator = gdb.FrameDecorator.FrameDecorator(frame)
+        separator = ansi(', ', R.style_low)
+        if show_arguments:
+            def prefix(line):
+                return Stack.format_line('arg', line)
+            frame_args = decorator.frame_args()
+            args_lines = Variables.fetch(frame, frame_args, compact, align, sort)
+            if args_lines:
+                if compact:
+                    args_line = separator.join(args_lines)
+                    single_line = prefix(args_line)
+                    out.append(single_line)
+                else:
+                    out.extend(map(prefix, args_lines))
+        if show_locals:
+            def prefix(line):
+                return Stack.format_line('loc', line)
+            frame_locals = decorator.frame_locals()
+            locals_lines = Variables.fetch(frame, frame_locals, compact, align, sort)
+            if locals_lines:
+                if compact:
+                    locals_line = separator.join(locals_lines)
+                    single_line = prefix(locals_line)
+                    out.append(single_line)
+                else:
+                    out.extend(map(prefix, locals_lines))
+        return out
+
+    @staticmethod
+    def fetch(frame, data, compact, align, sort):
+        lines = []
+        name_width = 0
+        if align and not compact:
+            name_width = max(len(str(elem.sym)) for elem in data) if data else 0
+        for elem in data or []:
+            name = ansi(elem.sym, R.style_high) + ' ' * (name_width - len(str(elem.sym)))
+            equal = ansi('=', R.style_low)
+            value = format_value(elem.sym.value(frame), compact)
+            lines.append('{} {} {}'.format(name, equal, value))
+        if sort:
+            lines.sort()
+        return lines
+
+class Stack(Dashboard.Module):
+    '''Show the current stack trace including the function name and the file location, if available.
+
+Optionally list the frame arguments and locals too.'''
+
+    def label(self):
+        return 'Stack'
+
+    def lines(self, term_width, term_height, style_changed):
+        # skip if the current thread is not stopped
+        if not gdb.selected_thread().is_stopped():
+            return []
+        # find the selected frame (i.e., the first to display)
+        selected_index = 0
+        frame = gdb.newest_frame()
+        while frame:
+            if frame == gdb.selected_frame():
+                break
+            frame = frame.older()
+            selected_index += 1
+        # format up to "limit" frames
+        frames = []
+        number = selected_index
+        more = False
+        while frame:
+            # the first is the selected one
+            selected = (len(frames) == 0)
+            # fetch frame info
+            style = R.style_selected_1 if selected else R.style_selected_2
+            frame_id = ansi(str(number), style)
+            info = Stack.get_pc_line(frame, style)
+            frame_lines = []
+            frame_lines.append('[{}] {}'.format(frame_id, info))
+            # add frame arguments and locals
+            variables = Variables.format_frame(
+                frame, self.show_arguments, self.show_locals, self.compact, self.align, self.sort)
+            frame_lines.extend(variables)
+            # add frame
+            frames.append(frame_lines)
+            # next
+            frame = frame.older()
+            number += 1
+            # check finished according to the limit
+            if self.limit and len(frames) == self.limit:
+                # more frames to show but limited
+                if frame:
+                    more = True
+                break
+        # format the output
+        lines = []
+        for frame_lines in frames:
+            lines.extend(frame_lines)
+        # add the placeholder
+        if more:
+            lines.append('[{}]'.format(ansi('+', R.style_selected_2)))
+        return lines
+
+    def attributes(self):
+        return {
+            'limit': {
+                'doc': 'Maximum number of displayed frames (0 means no limit).',
+                'default': 10,
+                'type': int,
+                'check': check_ge_zero
+            },
+            'arguments': {
+                'doc': 'Frame arguments visibility flag.',
+                'default': False,
+                'name': 'show_arguments',
+                'type': bool
+            },
+            'locals': {
+                'doc': 'Frame locals visibility flag.',
+                'default': False,
+                'name': 'show_locals',
+                'type': bool
+            },
+            'compact': {
+                'doc': 'Single-line display flag.',
+                'default': False,
+                'type': bool
+            },
+            'align': {
+                'doc': 'Align variables in column flag (only if not compact).',
+                'default': False,
+                'type': bool
+            },
+            'sort': {
+                'doc': 'Sort variables by name.',
+                'default': False,
+                'type': bool
+            }
+        }
+
+    @staticmethod
+    def format_line(prefix, line):
+        prefix = ansi(prefix, R.style_low)
+        return '{} {}'.format(prefix, line)
+
+    @staticmethod
+    def get_pc_line(frame, style):
+        frame_pc = ansi(format_address(frame.pc()), style)
+        info = 'from {}'.format(frame_pc)
+        # if a frame function symbol is available then use it to fetch the
+        # current function name and address, otherwise fall back relying on the
+        # frame name
+        if frame.function():
+            name = ansi(frame.function(), style)
+            func_start = to_unsigned(frame.function().value())
+            offset = ansi(str(frame.pc() - func_start), style)
+            info += ' in {}+{}'.format(name, offset)
+        elif frame.name():
+            name = ansi(frame.name(), style)
+            info += ' in {}'.format(name)
+        sal = frame.find_sal()
+        if sal and sal.symtab:
+            file_name = ansi(sal.symtab.filename, style)
+            file_line = ansi(str(sal.line), style)
+            info += ' at {}:{}'.format(file_name, file_line)
+        return info
+
 class History(Dashboard.Module):
-    """List the last entries of the value history."""
+    '''List the last entries of the value history.'''
 
     def label(self):
         return 'History'
 
-    def lines(self, term_width, style_changed):
+    def lines(self, term_width, term_height, style_changed):
         out = []
         # fetch last entries
         for i in range(-self.limit + 1, 1):
             try:
-                value = to_string(gdb.history(i))
-                value_id = ansi('$${}', R.style_low).format(abs(i))
-                line = '{} = {}'.format(value_id, value)
+                value = format_value(gdb.history(i))
+                value_id = ansi('$${}', R.style_high).format(abs(i))
+                equal = ansi('=', R.style_low)
+                line = '{} {} {}'.format(value_id, equal, value)
                 out.append(line)
             except gdb.error:
                 continue
@@ -1110,97 +1745,98 @@ class History(Dashboard.Module):
         }
 
 class Memory(Dashboard.Module):
-    """Allow to inspect memory regions."""
+    '''Allow to inspect memory regions.'''
 
-    @staticmethod
-    def format_byte(byte):
-        # `type(byte) is bytes` in Python 3
-        if byte.isspace():
-            return ' '
-        elif 0x20 < ord(byte) < 0x7e:
-            return chr(ord(byte))
-        else:
-            return '.'
+    DEFAULT_LENGTH = 16
 
-    @staticmethod
-    def parse_as_address(expression):
-        value = gdb.parse_and_eval(expression)
-        return to_unsigned(value)
+    class Region():
+        def __init__(self, expression, length, module):
+            self.expression = expression
+            self.length = length
+            self.module = module
+            self.original = None
+            self.latest = None
+
+        def reset(self):
+            self.original = None
+            self.latest = None
+
+        def format(self, per_line):
+            # fetch the memory content
+            try:
+                address = Memory.parse_as_address(self.expression)
+                inferior = gdb.selected_inferior()
+                memory = inferior.read_memory(address, self.length)
+                # set the original memory snapshot if needed
+                if not self.original:
+                    self.original = memory
+            except gdb.error as e:
+                msg = 'Cannot access {} bytes starting at {}: {}'
+                msg = msg.format(self.length, self.expression, e)
+                return [ansi(msg, R.style_error)]
+            # format the memory content
+            out = []
+            for i in range(0, len(memory), per_line):
+                region = memory[i:i + per_line]
+                pad = per_line - len(region)
+                address_str = format_address(address + i)
+                # compute changes
+                hexa = []
+                text = []
+                for j in range(len(region)):
+                    rel = i + j
+                    byte = memory[rel]
+                    hexa_byte = '{:02x}'.format(ord(byte))
+                    text_byte = self.module.format_byte(byte)
+                    # differences against the latest have the highest priority
+                    if self.latest and memory[rel] != self.latest[rel]:
+                        hexa_byte = ansi(hexa_byte, R.style_selected_1)
+                        text_byte = ansi(text_byte, R.style_selected_1)
+                    # cumulative changes if enabled
+                    elif self.module.cumulative and memory[rel] != self.original[rel]:
+                        hexa_byte = ansi(hexa_byte, R.style_selected_2)
+                        text_byte = ansi(text_byte, R.style_selected_2)
+                    # format the text differently for clarity
+                    else:
+                        text_byte = ansi(text_byte, R.style_high)
+                    hexa.append(hexa_byte)
+                    text.append(text_byte)
+                # output the formatted line
+                hexa_placeholder = ' {}'.format(self.module.placeholder[0] * 2)
+                text_placeholder = self.module.placeholder[0]
+                out.append('{}  {}{}  {}{}'.format(
+                    ansi(address_str, R.style_low),
+                    ' '.join(hexa), ansi(pad * hexa_placeholder, R.style_low),
+                    ''.join(text), ansi(pad * text_placeholder, R.style_low)))
+            # update the latest memory snapshot
+            self.latest = memory
+            return out
 
     def __init__(self):
-        self.row_length = 16
         self.table = {}
-
-    def format_memory(self, start, memory):
-        out = []
-        for i in range(0, len(memory), self.row_length):
-            region = memory[i:i + self.row_length]
-            pad = self.row_length - len(region)
-            address = format_address(start + i)
-            hexa = (' '.join('{:02x}'.format(ord(byte)) for byte in region))
-            text = (''.join(Memory.format_byte(byte) for byte in region))
-            out.append('{} {}{} {}{}'.format(ansi(address, R.style_low),
-                                             hexa,
-                                             ansi(pad * ' --', R.style_low),
-                                             ansi(text, R.style_high),
-                                             ansi(pad * '.', R.style_low)))
-        return out
 
     def label(self):
         return 'Memory'
 
-    def lines(self, term_width, style_changed):
+    def lines(self, term_width, term_height, style_changed):
         out = []
-        inferior = gdb.selected_inferior()
-        for address, length in sorted(self.table.items()):
-            try:
-                memory = inferior.read_memory(address, length)
-                out.extend(self.format_memory(address, memory))
-            except gdb.error:
-                msg = 'Cannot access {} bytes starting at {}'
-                msg = msg.format(length, format_address(address))
-                out.append(ansi(msg, R.style_error))
-            out.append(divider(term_width))
-        # drop last divider
-        if out:
-            del out[-1]
+        for expression, region in self.table.items():
+            out.append(divider(term_width, expression))
+            out.extend(region.format(self.get_per_line(term_width)))
         return out
-
-    def watch(self, arg):
-        if arg:
-            address, _, length = arg.partition(' ')
-            address = Memory.parse_as_address(address)
-            if length:
-                length = Memory.parse_as_address(length)
-            else:
-                length = self.row_length
-            self.table[address] = length
-        else:
-            raise Exception('Specify an address')
-
-    def unwatch(self, arg):
-        if arg:
-            try:
-                del self.table[Memory.parse_as_address(arg)]
-            except KeyError:
-                raise Exception('Memory region not watched')
-        else:
-            raise Exception('Specify an address')
-
-    def clear(self, arg):
-        self.table.clear()
 
     def commands(self):
         return {
             'watch': {
                 'action': self.watch,
-                'doc': 'Watch a memory region by address and length.\n'
-                       'The length defaults to 16 byte.',
+                'doc': '''Watch a memory region by expression and length.
+
+The length defaults to 16 bytes.''',
                 'complete': gdb.COMPLETE_EXPRESSION
             },
             'unwatch': {
                 'action': self.unwatch,
-                'doc': 'Stop watching a memory region by address.',
+                'doc': 'Stop watching a memory region by expression.',
                 'complete': gdb.COMPLETE_EXPRESSION
             },
             'clear': {
@@ -1209,8 +1845,72 @@ class Memory(Dashboard.Module):
             }
         }
 
+    def attributes(self):
+        return {
+            'cumulative': {
+                'doc': 'Highlight changes cumulatively, watch again to reset.',
+                'default': False,
+                'type': bool
+            },
+            'full': {
+                'doc': 'Take the whole horizontal space.',
+                'default': False,
+                'type': bool
+            },
+            'placeholder': {
+                'doc': 'Placeholder used for missing items and unprintable characters.',
+                'default': '·'
+            }
+        }
+
+    def watch(self, arg):
+        if arg:
+            expression, _, length_str = arg.partition(' ')
+            length = Memory.parse_as_address(length_str) if length_str else Memory.DEFAULT_LENGTH
+            # keep the length when the memory is watched to reset the changes
+            region = self.table.get(expression)
+            if region and not length_str:
+                region.reset()
+            else:
+                self.table[expression] = Memory.Region(expression, length, self)
+        else:
+            raise Exception('Specify a memory location')
+
+    def unwatch(self, arg):
+        if arg:
+            try:
+                del self.table[arg]
+            except KeyError:
+                raise Exception('Memory expression not watched')
+        else:
+            raise Exception('Specify a matched memory expression')
+
+    def clear(self, arg):
+        self.table.clear()
+
+    def format_byte(self, byte):
+        # `type(byte) is bytes` in Python 3
+        if 0x20 < ord(byte) < 0x7f:
+            return chr(ord(byte))
+        else:
+            return self.placeholder[0]
+
+    def get_per_line(self, term_width):
+        if self.full:
+            padding = 3  # two double spaces separator (one is part of below)
+            elem_size = 4 # HH + 1 space + T
+            address_length = gdb.parse_and_eval('$pc').type.sizeof * 2 + 2  # 0x
+            return max(int((term_width - address_length - padding) / elem_size), 1)
+        else:
+            return Memory.DEFAULT_LENGTH
+
+    @staticmethod
+    def parse_as_address(expression):
+        value = gdb.parse_and_eval(expression)
+        return to_unsigned(value)
+
 class Registers(Dashboard.Module):
-    """Show the CPU registers and their values."""
+    '''Show the CPU registers and their values.'''
 
     def __init__(self):
         self.table = {}
@@ -1218,48 +1918,87 @@ class Registers(Dashboard.Module):
     def label(self):
         return 'Registers'
 
-    def lines(self, term_width, style_changed):
+    def lines(self, term_width, term_height, style_changed):
+        # skip if the current thread is not stopped
+        if not gdb.selected_thread().is_stopped():
+            return []
+        # obtain the registers to display
+        if style_changed:
+            self.table = {}
+        if self.register_list:
+            register_list = self.register_list.split()
+        else:
+            register_list = Registers.fetch_register_list()
         # fetch registers status
         registers = []
-        for reg_info in run('info registers').strip().split('\n'):
-            # fetch register and update the table
-            name = reg_info.split(None, 1)[0]
+        for name in register_list:
             # Exclude registers with a dot '.' or parse_and_eval() will fail
             if '.' in name:
                 continue
             value = gdb.parse_and_eval('${}'.format(name))
-            string_value = self.format_value(value)
+            string_value = Registers.format_value(value)
             changed = self.table and (self.table.get(name, '') != string_value)
             self.table[name] = string_value
             registers.append((name, string_value, changed))
-        # split registers in rows and columns, each column is composed of name,
-        # space, value and another trailing space which is skipped in the last
-        # column (hence term_width + 1)
+        # compute lengths considering an extra space between and around the
+        # entries (hence the +2 and term_width - 1)
         max_name = max(len(name) for name, _, _ in registers)
         max_value = max(len(value) for _, value, _ in registers)
         max_width = max_name + max_value + 2
-        per_line = int((term_width + 1) / max_width) or 1
-        # redistribute extra space among columns
-        extra = int((term_width + 1 - max_width * per_line) / per_line)
-        if per_line == 1:
-            # center when there is only one column
-            max_name += int(extra / 2)
-            max_value += int(extra / 2)
+        columns = min(int((term_width - 1) / max_width) or 1, len(registers))
+        rows = int(math.ceil(float(len(registers)) / columns))
+        # build the registers matrix
+        if self.column_major:
+            matrix = list(registers[i:i + rows] for i in range(0, len(registers), rows))
         else:
-            max_value += extra
-        # format registers info
-        partial = []
-        for name, value, changed in registers:
-            styled_name = ansi(name.rjust(max_name), R.style_low)
-            value_style = R.style_selected_1 if changed else ''
-            styled_value = ansi(value.ljust(max_value), value_style)
-            partial.append(styled_name + ' ' + styled_value)
-        out = []
-        for i in range(0, len(partial), per_line):
-            out.append(' '.join(partial[i:i + per_line]).rstrip())
+            matrix = list(registers[i::columns] for i in range(columns))
+        # compute the lengths column wise
+        max_names_column = list(max(len(name) for name, _, _ in column) for column in matrix)
+        max_values_column = list(max(len(value) for _, value, _ in column) for column in matrix)
+        line_length = sum(max_names_column) + columns + sum(max_values_column)
+        extra = term_width - line_length
+        # compute padding as if there were one more column
+        base_padding = int(extra / (columns + 1))
+        padding_column = [base_padding] * columns
+        # distribute the remainder among columns giving the precedence to
+        # internal padding
+        rest = extra % (columns + 1)
+        while rest:
+            padding_column[rest % columns] += 1
+            rest -= 1
+        # format the registers
+        out = [''] * rows
+        for i, column in enumerate(matrix):
+            max_name = max_names_column[i]
+            max_value = max_values_column[i]
+            for j, (name, value, changed) in enumerate(column):
+                name = ' ' * (max_name - len(name)) + ansi(name, R.style_low)
+                style = R.style_selected_1 if changed else ''
+                value = ansi(value, style) + ' ' * (max_value - len(value))
+                padding = ' ' * padding_column[i]
+                item = '{}{} {}'.format(padding, name, value)
+                out[j] += item
         return out
 
-    def format_value(self, value):
+    def attributes(self):
+        return {
+            'column-major': {
+                'doc': 'Show registers in columns instead of rows.',
+                'default': False,
+                'name': 'column_major',
+                'type': bool
+            },
+            'list': {
+                'doc': '''String of space-separated register names to display.
+
+The empty list (default) causes to show all the available registers.''',
+                'default': '',
+                'name': 'register_list',
+            }
+        }
+
+    @staticmethod
+    def format_value(value):
         try:
             if value.type.code in [gdb.TYPE_CODE_INT, gdb.TYPE_CODE_PTR]:
                 int_value = to_unsigned(value, value.type.sizeof)
@@ -1270,90 +2009,256 @@ class Registers(Dashboard.Module):
             pass
         return str(value)
 
+    @staticmethod
+    def fetch_register_list(*match_groups):
+        names = []
+        for line in run('maintenance print register-groups').split('\n'):
+            fields = line.split()
+            if len(fields) != 7:
+                continue
+            name, _, _, _, _, _, groups = fields
+            if not re.match('\w', name):
+                continue
+            for group in groups.split(','):
+                if group in (match_groups or ('general',)):
+                    names.append(name)
+                    break
+        return names
+
 class Threads(Dashboard.Module):
-    """List the currently available threads."""
+    '''List the currently available threads.'''
 
     def label(self):
         return 'Threads'
 
-    def lines(self, term_width, style_changed):
+    def lines(self, term_width, term_height, style_changed):
         out = []
         selected_thread = gdb.selected_thread()
-        selected_frame = gdb.selected_frame()
-        for thread in gdb.Inferior.threads(gdb.selected_inferior()):
+        # do not restore the selected frame if the thread is not stopped
+        restore_frame = gdb.selected_thread().is_stopped()
+        if restore_frame:
+            selected_frame = gdb.selected_frame()
+        # fetch the thread list
+        threads = []
+        for inferior in gdb.inferiors():
+            if self.all_inferiors or inferior == gdb.selected_inferior():
+                threads += gdb.Inferior.threads(inferior)
+        for thread in threads:
+            # skip running threads if requested
+            if self.skip_running and thread.is_running():
+                continue
             is_selected = (thread.ptid == selected_thread.ptid)
             style = R.style_selected_1 if is_selected else R.style_selected_2
-            number = ansi(str(thread.num), style)
+            if self.all_inferiors:
+                number = '{}.{}'.format(thread.inferior.num, thread.num)
+            else:
+                number = str(thread.num)
+            number = ansi(number, style)
             tid = ansi(str(thread.ptid[1] or thread.ptid[2]), style)
             info = '[{}] id {}'.format(number, tid)
             if thread.name:
                 info += ' name {}'.format(ansi(thread.name, style))
-            # switch thread to fetch frame info
-            thread.switch()
-            frame = gdb.newest_frame()
-            info += ' ' + Stack.get_pc_line(frame, style)
+            # switch thread to fetch info (unless is running in non-stop mode)
+            try:
+                thread.switch()
+                frame = gdb.newest_frame()
+                info += ' ' + Stack.get_pc_line(frame, style)
+            except gdb.error:
+                info += ' (running)'
             out.append(info)
         # restore thread and frame
         selected_thread.switch()
-        selected_frame.select()
+        if restore_frame:
+            selected_frame.select()
         return out
 
+    def attributes(self):
+        return {
+            'skip-running': {
+                'doc': 'Skip running threads.',
+                'default': False,
+                'name': 'skip_running',
+                'type': bool
+            },
+            'all-inferiors': {
+                'doc': 'Show threads from all inferiors.',
+                'default': False,
+                'name': 'all_inferiors',
+                'type': bool
+            },
+        }
+
 class Expressions(Dashboard.Module):
-    """Watch user expressions."""
+    '''Watch user expressions.'''
 
     def __init__(self):
-        self.number = 1
-        self.table = {}
+        self.table = set()
 
     def label(self):
         return 'Expressions'
 
-    def lines(self, term_width, style_changed):
+    def lines(self, term_width, term_height, style_changed):
         out = []
-        for number, expression in sorted(self.table.items()):
+        label_width = 0
+        if self.align:
+            label_width = max(len(expression) for expression in self.table) if self.table else 0
+        default_radix = Expressions.get_default_radix()
+        for expression in self.table:
+            label = expression
+            match = re.match('^/(\d+) +(.+)$', expression)
             try:
-                value = to_string(gdb.parse_and_eval(expression))
+                if match:
+                    radix, expression = match.groups()
+                    run('set output-radix {}'.format(radix))
+                value = format_value(gdb.parse_and_eval(expression))
             except gdb.error as e:
                 value = ansi(e, R.style_error)
-            number = ansi(number, R.style_selected_2)
-            expression = ansi(expression, R.style_low)
-            out.append('[{}] {} = {}'.format(number, expression, value))
+            finally:
+                if match:
+                    run('set output-radix {}'.format(default_radix))
+            label = ansi(expression, R.style_high) + ' ' * (label_width - len(expression))
+            equal = ansi('=', R.style_low)
+            out.append('{} {} {}'.format(label, equal, value))
         return out
+
+    def commands(self):
+        return {
+            'watch': {
+                'action': self.watch,
+                'doc': 'Watch an expression using the format `[/<radix>] <expression>`.',
+                'complete': gdb.COMPLETE_EXPRESSION
+            },
+            'unwatch': {
+                'action': self.unwatch,
+                'doc': 'Stop watching an expression.',
+                'complete': gdb.COMPLETE_EXPRESSION
+            },
+            'clear': {
+                'action': self.clear,
+                'doc': 'Clear all the watched expressions.'
+            }
+        }
+
+    def attributes(self):
+        return {
+            'align': {
+                'doc': 'Align variables in column flag.',
+                'default': False,
+                'type': bool
+            }
+        }
 
     def watch(self, arg):
         if arg:
-            self.table[self.number] = arg
-            self.number += 1
+            self.table.add(arg)
         else:
             raise Exception('Specify an expression')
 
     def unwatch(self, arg):
         if arg:
             try:
-                del self.table[int(arg)]
+                self.table.remove(arg)
             except:
                 raise Exception('Expression not watched')
         else:
-            raise Exception('Specify an identifier')
+            raise Exception('Specify an expression')
 
     def clear(self, arg):
         self.table.clear()
 
-    def commands(self):
+    @staticmethod
+    def get_default_radix():
+        try:
+            return gdb.parameter('output-radix')
+        except RuntimeError:
+            # XXX this is a fix for GDB <8.1.x see #161
+            message = run('show output-radix')
+            match = re.match('^Default output radix for printing of values is (\d+)\.$', message)
+            return match.groups()[0] if match else 10  # fallback
+
+class Breakpoints(Dashboard.Module):
+    '''Display the breakpoints list.'''
+
+    NAMES = {
+        gdb.BP_BREAKPOINT: 'break',
+        gdb.BP_WATCHPOINT: 'watch',
+        gdb.BP_HARDWARE_WATCHPOINT: 'write watch',
+        gdb.BP_READ_WATCHPOINT: 'read watch',
+        gdb.BP_ACCESS_WATCHPOINT: 'access watch'
+    }
+
+    def label(self):
+        return 'Breakpoints'
+
+    def lines(self, term_width, term_height, style_changed):
+        out = []
+        breakpoints = fetch_breakpoints(watchpoints=True, pending=self.show_pending)
+        for breakpoint in breakpoints:
+            sub_lines = []
+            # format common information
+            style = R.style_selected_1 if breakpoint['enabled'] else R.style_selected_2
+            number = ansi(breakpoint['number'], style)
+            bp_type = ansi(Breakpoints.NAMES[breakpoint['type']], style)
+            if breakpoint['temporary']:
+                bp_type = bp_type + ' {}'.format(ansi('once', style))
+            if not R.ansi and breakpoint['enabled']:
+                bp_type = 'disabled ' + bp_type
+            line = '[{}] {}'.format(number, bp_type)
+            if breakpoint['type'] == gdb.BP_BREAKPOINT:
+                for i, address in enumerate(breakpoint['addresses']):
+                    addr = address['address']
+                    if i == 0 and addr:
+                        # this is a regular breakpoint
+                        line += ' at {}'.format(ansi(format_address(addr), style))
+                        # format source information
+                        file_name = address.get('file_name')
+                        file_line = address.get('file_line')
+                        if file_name and file_line:
+                            file_name = ansi(file_name, style)
+                            file_line = ansi(file_line, style)
+                            line += ' in {}:{}'.format(file_name, file_line)
+                    elif i > 0:
+                        # this is a sub breakpoint
+                        sub_style = R.style_selected_1 if address['enabled'] else R.style_selected_2
+                        sub_number = ansi('{}.{}'.format(breakpoint['number'], i), sub_style)
+                        sub_line = '[{}]'.format(sub_number)
+                        sub_line += ' at {}'.format(ansi(format_address(addr), sub_style))
+                        # format source information
+                        file_name = address.get('file_name')
+                        file_line = address.get('file_line')
+                        if file_name and file_line:
+                            file_name = ansi(file_name, sub_style)
+                            file_line = ansi(file_line, sub_style)
+                            sub_line += ' in {}:{}'.format(file_name, file_line)
+                        sub_lines += [sub_line]
+                # format user location
+                location = breakpoint['location']
+                line += ' for {}'.format(ansi(location, style))
+            else:
+                # format user expression
+                expression = breakpoint['expression']
+                line += ' for {}'.format(ansi(expression, style))
+            # format condition
+            condition = breakpoint['condition']
+            if condition:
+                line += ' if {}'.format(ansi(condition, style))
+            # format hit count
+            hit_count = breakpoint['hit_count']
+            if hit_count:
+                word = 'time{}'.format('s' if hit_count > 1 else '')
+                line += ' hit {} {}'.format(ansi(breakpoint['hit_count'], style), word)
+            # append the main line and possibly sub breakpoints
+            out.append(line)
+            out.extend(sub_lines)
+        return out
+
+    def attributes(self):
         return {
-            'watch': {
-                'action': self.watch,
-                'doc': 'Watch an expression.',
-                'complete': gdb.COMPLETE_EXPRESSION
-            },
-            'unwatch': {
-                'action': self.unwatch,
-                'doc': 'Stop watching an expression by id.',
-                'complete': gdb.COMPLETE_EXPRESSION
-            },
-            'clear': {
-                'action': self.clear,
-                'doc': 'Clear all the watched expressions.'
+            'pending': {
+                'doc': 'Also show pending breakpoints.',
+                'default': True,
+                'name': 'show_pending',
+                'type': bool
             }
         }
 
@@ -1363,7 +2268,6 @@ end
 # Better GDB defaults ----------------------------------------------------------
 
 set history save
-set confirm off
 set verbose off
 set print pretty on
 set print array off
@@ -1373,41 +2277,28 @@ set python print-stack full
 # Start ------------------------------------------------------------------------
 
 python Dashboard.start()
-
 dashboard registers
 dashboard assembly
+dashboard history
+dashboard memory
+dashboard breakpoints
+# dashboard expressions
+# dashboard expressions watch var
+dashboard stack
+dashboard threads
 
-alias -a src = dashboard source -style context
-echo \n
-echo == HELP ==\n
-echo Step: s -into, n -exit func, c -continue\n
-echo Breakpoints: b Class::method, info b -list breakpoints, delete num\n
-echo Misc: bt -backtrace, db -dashboard, l LINE -list code
-echo \n\n
-# alias -a dbstackFull = db stack -style locals True
-# alias -a dbstackArgs = db stack -style locals False
+# Skip all catch stuff
+# see https://github.com/catchorg/Catch2/blob/master/contrib/gdbinit
+skip -rfu Catch
+skip -rfu _catch_
 
-# ------------------------------------------------------------------------------
-# Copyright (c) 2015-2016 Andrea Cardaci <cyrus.and@gmail.com>
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-# ------------------------------------------------------------------------------
+alias -a db = dashboard
+alias -a dbw = dashboard expressions watch
+alias -a dbuw = dashboard expressions unwatch
+alias -a dbc = dashboard expressions unwatch
+
+# File variables ---------------------------------------------------------------
+
 # vim: filetype=python
 # Local Variables:
 # mode: python

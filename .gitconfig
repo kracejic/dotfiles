@@ -67,6 +67,9 @@
     dh = diff --color-words -b HEAD
     diff=diff --ws-error-highlight=all
 
+    # support easy change of identity
+    identity = "! git config user.name \"$(git config user.$1.name)\"; git config user.email \"$(git config user.$1.email)\"; git config user.signingkey \"$(git config user.$1.signingkey)\"; :"
+
     #graphs
     g = log --oneline --decorate --graph --all
     gg = log --oneline --decorate --graph
@@ -84,8 +87,8 @@
     gdd = log --graph --pretty=format:'%C(yellow)%h%Creset%C(red bold)%d%Creset %s %Cgreen(%cr) %C(blue)<%an>%Creset' --decorate --abbrev-commit --all --author-date-order
     gd = log --oneline --decorate --graph --all --author-date-order
 
-    gb = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(white)%d %C(bold black)%ar %C(reset)%n' --all
-    gbd = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(white)%d %C(bold black)%ai %C(reset)%n' --all
+    gb = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(yellow bold)%d %C(white)%s %C(bold black)%ar %C(reset)%n' --all
+    gbd = log --graph --simplify-by-decoration --pretty=format:'%C(yellow)%h%C(yellow bold)%d %C(white)%s %C(bold black)%ai %C(reset)%n' --all
 
     g2 = log --graph --pretty=format':%s %C(bold blue)%an, %ar %Cgreen(%h)%Creset'
     g3 = log --pretty=format:"%Cgreen%h%Creset %ad %C(cyan)%an%Creset %s%C(red)%d%Creset" --graph --date=short
@@ -109,8 +112,8 @@
 
     # https://salferrarello.com/using-vim-view-git-commits/
     # View commit with K (upper case k)
-    vim = "!git log --graph --oneline --decorate --all --pretty=format:'%h %d %s <%an>' | vim -R -c \"set filetype=git nowrap\" -"
-    nvim = "!git log --graph --oneline --decorate --all --pretty=format:'%h %d %s <%an>' | nvim -R -c \"set filetype=git nowrap\" -"
+    vim = "!git log --graph --oneline --decorate --all --pretty=format:'%h %d %s (%ci) <%an>' | vim -R -c \"set filetype=git nowrap\" -"
+    nvim = "!git log --graph --oneline --decorate --all --pretty=format:'%h %d %s (%ci) <%an>' | nvim -R -c \"set filetype=git nowrap\" -"
 
 
     mt = mergetool
@@ -150,6 +153,7 @@
     discard = checkout --
     uncommit = reset --mixed HEAD~
     amend = commit --amend
+    qamend = "!git dd && git add --update :/ && git commit --amend --no-edit"
     detach = checkout --detach HEAD
 
     # Add a file/directory to your .gitignore
@@ -164,12 +168,22 @@
     daily3w = "!git log --since '3 weeks ago' --author $(git config user.email) --pretty=short --stat"
     daily4w = "!git log --since '4 weeks ago' --author $(git config user.email) --pretty=short --stat"
     # Show the history difference between a local branche and its remote
-    divergence = "!git log --left-right --graph --cherry-pick --oneline $1..origin/$1"
-    divergence2 = "!git log --left-right --graph --cherry-pick --oneline $1..$2"
+    divergence = "!git log --left-right --graph --cherry-pick --oneline $1~...$2~"
+    divergence2 = "!git log --left-right --graph --cherry-pick --oneline $1...origin/$1"
     # divergence = log --left-right --graph --cherry-pick --oneline $1...origin/$1
 
-    # Which branches contain a commit with hash $1
-    contains = branch -a --contains
+    # Which branch and tags contain a commit
+    contains= "!f() { git tag --contains $1; git branch -a --contains $1; }; f"
+
+    # Find tags containing commit
+    containstag = "!f() { git tag --contains $1; }; f"
+
+    # Find branches containing commit
+    containsbranch = "!f() { git branch -a --contains $1; }; f"
+
+
+    # Find commits by source code
+    fc = "!f() { git l --date=short -S$1; }; f"
 
 
     # find file in repo
@@ -215,7 +229,24 @@
     tool = vimdiff
     conflictstyle = diff3
 [diff]
-    indentHeuristic = true
+    # indentHeuristic = true
+
+    # Use more time to create better diffs.
+    # E.g. matching opening/closing braces from neighbour functions.
+    # See "`git help diff` --patience" and "`git help merge` recursive".
+    algorithm = patience
+
+    # Use blank lines as a strong hint to identify the changes
+    compactionHeuristic = true
+
+    # Diff will detect both renames and copies.
+    renames = copies
+
+    # Default to vimdiff for visualising diffs.
+    # Override with --tool=<tool> in difftool
+    # See`git help difftool`
+    # See`git help config` and search for "diff.tool"
+    # tool=opendiff
 [credential]
     helper = store
 [remote-hg]
@@ -226,3 +257,14 @@
     verbose = 1
 [cola]
     spellcheck = false
+[filter "lfs"]
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+[init]
+	defaultBranch = master
+[gpg]
+	program = /usr/bin/gpg2
+[safe]
+	directory = *

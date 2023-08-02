@@ -41,6 +41,11 @@ if [[ $# > 0 ]]; then
             shift
             args="unit $*"
             ;;
+        ugdb)
+            shift
+            pretty=
+            args="unit-gdb $*"
+            ;;
         i)
             shift
             args="install $*"

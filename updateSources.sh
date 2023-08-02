@@ -1,6 +1,7 @@
 #!/bin/sh
 
 vim -d $HOME/.bashrc ./.bashrc
+vim -d $HOME/.zshrc ./.zshrc
 vim -d $HOME/.gdbinit ./.gdbinit
 vim -d $HOME/.gitconfig ./.gitconfig
 vim -d $HOME/bin/b ./b
