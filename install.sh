@@ -15,6 +15,8 @@ if [ -d "$FOLDER/.git" ]; then
   ln -s $FOLDER/.tmux.conf ~/.tmux.conf
   rm ~/.gdbinit
   ln -s $FOLDER/.gdbinit ~/.gdbinit
+  rm ~/.zshrc
+  ln -s $FOLDER/.zshrc ~/.zshrc
 fi
 
 if [ -d "~/.vim/bundle/Vundle.vim" ] ; then
